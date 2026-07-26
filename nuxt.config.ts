@@ -12,15 +12,13 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       supabaseUrl: process.env.NUXT_PUBLIC_SUPABASE_URL || '',
-      supabasePublishableKey:
-        process.env.NUXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || '',
+      supabasePublishableKey: process.env.NUXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || '',
     },
   },
   app: {
     head: {
       titleTemplate: '%s · Damnatiox Knowledge',
       meta: [
-        { name: 'theme-color', content: '#0b0d0f' },
         {
           name: 'description',
           content: 'Damnatiox 的个人 Markdown 知识工作台',

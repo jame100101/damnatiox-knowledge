@@ -1,8 +1,13 @@
 import { mount } from '@vue/test-utils'
-import { describe, expect, it } from 'vitest'
+import { ref } from 'vue'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import MarkdownRenderer from '~/components/markdown/MarkdownRenderer.vue'
 
 describe('MarkdownRenderer', () => {
+  beforeEach(() => {
+    vi.stubGlobal('useTheme', () => ({ theme: ref('dark') }))
+  })
+
   it('renders a preview while stripping malicious markup', () => {
     const wrapper = mount(MarkdownRenderer, {
       props: {

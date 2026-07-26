@@ -46,7 +46,10 @@ watch(
   { deep: true },
 )
 watch(tagsInput, (value) => {
-  draft.tags = value.split(',').map((tag) => tag.trim()).filter(Boolean)
+  draft.tags = value
+    .split(',')
+    .map((tag) => tag.trim())
+    .filter(Boolean)
 })
 watch(
   () => draft.title,
@@ -97,6 +100,11 @@ async function handleFiles(files: FileList | null) {
   }
 }
 
+function handleDrop(event: DragEvent) {
+  dragging.value = false
+  void handleFiles(event.dataTransfer?.files || null)
+}
+
 async function submit(status: 'draft' | 'published') {
   error.value = ''
   success.value = ''
@@ -125,12 +133,34 @@ async function submit(status: 'draft' | 'published') {
 <template>
   <div class="editor-shell">
     <section class="editor-meta">
-      <div class="field field-wide"><label>标题</label><input v-model="draft.title" class="input" placeholder="文档标题" /></div>
-      <div class="field"><label>Slug</label><input v-model="draft.slug" class="input mono" placeholder="document-slug" /></div>
-      <div class="field"><label>目标文件夹</label><FolderSelect v-model="draft.folder_id" :folders="folders" required /></div>
-      <div class="field field-wide"><label>描述</label><input v-model="draft.description" class="input" placeholder="一句话描述文档内容" /></div>
-      <div class="field"><label>标签（逗号分隔）</label><input v-model="tagsInput" class="input" placeholder="java, spring" /></div>
-      <div class="field"><label>排序</label><input v-model.number="draft.sort_order" class="input" type="number" /></div>
+      <div class="field field-wide">
+        <label>标题</label
+        ><input v-model="draft.title" class="input" placeholder="文档标题" />
+      </div>
+      <div class="field">
+        <label>Slug</label
+        ><input v-model="draft.slug" class="input mono" placeholder="document-slug" />
+      </div>
+      <div class="field">
+        <label>目标文件夹</label
+        ><FolderSelect v-model="draft.folder_id" :folders="folders" required />
+      </div>
+      <div class="field field-wide">
+        <label>描述</label
+        ><input
+          v-model="draft.description"
+          class="input"
+          placeholder="一句话描述文档内容"
+        />
+      </div>
+      <div class="field">
+        <label>标签（逗号分隔）</label
+        ><input v-model="tagsInput" class="input" placeholder="java, spring" />
+      </div>
+      <div class="field">
+        <label>排序</label
+        ><input v-model.number="draft.sort_order" class="input" type="number" />
+      </div>
     </section>
 
     <section
@@ -138,24 +168,49 @@ async function submit(status: 'draft' | 'published') {
       :class="{ dragging }"
       @dragover.prevent="dragging = true"
       @dragleave.prevent="dragging = false"
-      @drop.prevent="dragging = false; handleFiles($event.dataTransfer?.files || null)"
+      @drop.prevent="handleDrop"
     >
       <UploadCloud :size="20" />
-      <span><strong>拖入 Markdown</strong><small>.md / .markdown，最大 2 MB</small></span>
-      <button class="button small" type="button" @click="fileInput?.click()"><FileUp :size="14" /> 选择文件</button>
-      <input ref="fileInput" hidden type="file" accept=".md,.markdown,text/markdown,text/plain" multiple @change="handleFiles(($event.target as HTMLInputElement).files)" />
+      <span
+        ><strong>拖入 Markdown</strong><small>.md / .markdown，最大 2 MB</small></span
+      >
+      <button class="button small" type="button" @click="fileInput?.click()">
+        <FileUp :size="14" /> 选择文件
+      </button>
+      <input
+        ref="fileInput"
+        hidden
+        type="file"
+        accept=".md,.markdown,text/markdown,text/plain"
+        multiple
+        @change="handleFiles(($event.target as HTMLInputElement).files)"
+      />
     </section>
-    <p v-if="parseNotice" class="notice"><CheckCircle2 :size="14" /> {{ parseNotice }}</p>
+    <p v-if="parseNotice" class="notice">
+      <CheckCircle2 :size="14" /> {{ parseNotice }}
+    </p>
     <p v-if="error" class="error-text">{{ error }}</p>
     <p v-if="success" class="success-text">{{ success }}</p>
 
     <section class="split-editor">
       <div class="editor-pane">
-        <header><span>MARKDOWN</span><span>{{ draft.content.length }} CHARS</span></header>
-        <textarea v-model="draft.content" class="source-editor mono" spellcheck="false" aria-label="Markdown 原文" />
+        <header>
+          <span>MARKDOWN</span><span>{{ draft.content.length }} CHARS</span>
+        </header>
+        <textarea
+          v-model="draft.content"
+          class="source-editor mono"
+          spellcheck="false"
+          aria-label="Markdown 原文"
+        />
       </div>
       <div class="preview-pane">
-        <header><span>PREVIEW</span><button type="button" title="上传图片功能需要 Supabase Storage"><ImagePlus :size="14" /> 图片</button></header>
+        <header>
+          <span>PREVIEW</span
+          ><button type="button" title="上传图片功能需要 Supabase Storage">
+            <ImagePlus :size="14" /> 图片
+          </button>
+        </header>
         <div class="preview-scroll"><MarkdownRenderer :source="draft.content" /></div>
       </div>
     </section>
@@ -163,50 +218,205 @@ async function submit(status: 'draft' | 'published') {
     <footer class="editor-actions">
       <span>{{ dirty ? '有尚未保存的修改' : '全部修改已保存' }}</span>
       <div>
-        <button class="button" type="button" :disabled="busy" @click="submit('draft')"><Save :size="15" /> 保存草稿</button>
-        <button class="button primary" type="button" :disabled="busy" @click="submit('published')"><Send :size="15" /> 发布文档</button>
+        <button class="button" type="button" :disabled="busy" @click="submit('draft')">
+          <Save :size="15" /> 保存草稿
+        </button>
+        <button
+          class="button primary"
+          type="button"
+          :disabled="busy"
+          @click="submit('published')"
+        >
+          <Send :size="15" /> 发布文档
+        </button>
       </div>
     </footer>
   </div>
 </template>
 
 <style scoped>
-.editor-shell { padding: 22px 28px 90px; }
-.editor-meta { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 13px; margin-bottom: 15px; }
-.field-wide { grid-column: span 2; }
-.drop-zone { min-height: 61px; display: flex; align-items: center; gap: 11px; padding: 10px 13px; border: 1px dashed var(--kb-border-strong); border-radius: var(--kb-radius-md); color: var(--kb-text-subtle); background: var(--kb-surface); transition: border 150ms, background 150ms; }
-.drop-zone.dragging { border-color: var(--kb-accent); background: rgb(216 255 100 / 4%); }
-.drop-zone > span { flex: 1; display: grid; gap: 2px; }
-.drop-zone strong { color: var(--kb-text-muted); font-size: 12px; }
-.drop-zone small { font-size: 10px; }
-.notice { display: flex; align-items: center; gap: 7px; color: var(--kb-success); font-size: 12px; }
-.split-editor { height: max(560px, calc(100vh - 350px)); display: grid; grid-template-columns: 1fr 1fr; margin-top: 16px; border: 1px solid var(--kb-border); border-radius: var(--kb-radius-md); background: var(--kb-surface); overflow: hidden; }
-.editor-pane, .preview-pane { min-width: 0; display: flex; flex-direction: column; }
-.editor-pane { border-right: 1px solid var(--kb-border); }
-.split-editor header { min-height: 38px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; border-bottom: 1px solid var(--kb-border); color: var(--kb-text-subtle); font: 10px monospace; letter-spacing: .08em; }
-.split-editor header button { display: flex; align-items: center; gap: 5px; border: 0; background: transparent; color: var(--kb-text-subtle); cursor: pointer; }
-.source-editor { width: 100%; min-height: 0; flex: 1; resize: none; border: 0; outline: 0; padding: 19px; background: var(--kb-code-bg); color: #cfd5db; font-size: 13px; line-height: 1.65; tab-size: 2; }
-.preview-scroll { min-height: 0; flex: 1; padding: 26px 28px; overflow: auto; }
-.editor-actions { position: fixed; inset: auto 0 0 220px; z-index: 20; min-height: 62px; display: flex; align-items: center; justify-content: space-between; padding: 10px 28px; border-top: 1px solid var(--kb-border); background: rgb(17 20 24 / 96%); backdrop-filter: blur(5px); }
-.editor-actions > span { color: var(--kb-text-subtle); font-size: 11px; }
-.editor-actions > div { display: flex; gap: 8px; }
+.editor-shell {
+  padding: 22px 28px 90px;
+}
+.editor-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 13px;
+  margin-bottom: 15px;
+}
+.field-wide {
+  grid-column: span 2;
+}
+.drop-zone {
+  min-height: 61px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 13px;
+  border: 1px dashed var(--kb-border-strong);
+  border-radius: var(--kb-radius-md);
+  color: var(--kb-text-subtle);
+  background: var(--kb-surface);
+  transition:
+    border 150ms,
+    background 150ms;
+}
+.drop-zone.dragging {
+  border-color: var(--kb-accent);
+  background: rgb(216 255 100 / 4%);
+}
+.drop-zone > span {
+  flex: 1;
+  display: grid;
+  gap: 2px;
+}
+.drop-zone strong {
+  color: var(--kb-text-muted);
+  font-size: 12px;
+}
+.drop-zone small {
+  font-size: 10px;
+}
+.notice {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--kb-success);
+  font-size: 12px;
+}
+.split-editor {
+  height: max(560px, calc(100vh - 350px));
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin-top: 16px;
+  border: 1px solid var(--kb-border);
+  border-radius: var(--kb-radius-md);
+  background: var(--kb-surface);
+  overflow: hidden;
+}
+.editor-pane,
+.preview-pane {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.editor-pane {
+  border-right: 1px solid var(--kb-border);
+}
+.split-editor header {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--kb-border);
+  color: var(--kb-text-subtle);
+  font: 10px monospace;
+  letter-spacing: 0.08em;
+}
+.split-editor header button {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  background: transparent;
+  color: var(--kb-text-subtle);
+  cursor: pointer;
+}
+.source-editor {
+  width: 100%;
+  min-height: 0;
+  flex: 1;
+  resize: none;
+  border: 0;
+  outline: 0;
+  padding: 19px;
+  background: var(--kb-code-bg);
+  color: var(--kb-code-text);
+  font-size: 13px;
+  line-height: 1.65;
+  tab-size: 2;
+}
+.preview-scroll {
+  min-height: 0;
+  flex: 1;
+  padding: 26px 28px;
+  overflow: auto;
+}
+.editor-actions {
+  position: fixed;
+  inset: auto 0 0 220px;
+  z-index: 20;
+  min-height: 62px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 28px;
+  border-top: 1px solid var(--kb-border);
+  background: var(--kb-panel-bg);
+  backdrop-filter: blur(5px);
+}
+.editor-actions > span {
+  color: var(--kb-text-subtle);
+  font-size: 11px;
+}
+.editor-actions > div {
+  display: flex;
+  gap: 8px;
+}
 @media (max-width: 980px) {
-  .editor-meta { grid-template-columns: 1fr 1fr; }
-  .field-wide { grid-column: span 2; }
-  .split-editor { height: auto; grid-template-columns: 1fr; }
-  .editor-pane { border-right: 0; border-bottom: 1px solid var(--kb-border); }
-  .source-editor, .preview-scroll { min-height: 480px; }
+  .editor-meta {
+    grid-template-columns: 1fr 1fr;
+  }
+  .field-wide {
+    grid-column: span 2;
+  }
+  .split-editor {
+    height: auto;
+    grid-template-columns: 1fr;
+  }
+  .editor-pane {
+    border-right: 0;
+    border-bottom: 1px solid var(--kb-border);
+  }
+  .source-editor,
+  .preview-scroll {
+    min-height: 480px;
+  }
 }
 @media (max-width: 720px) {
-  .editor-shell { padding: 15px 14px 90px; }
-  .editor-meta { grid-template-columns: 1fr; }
-  .field-wide { grid-column: auto; }
-  .drop-zone { align-items: flex-start; flex-wrap: wrap; }
-  .drop-zone > span { min-width: 180px; }
-  .editor-actions { left: 0; bottom: 58px; padding: 8px 12px; }
-  .editor-actions > span { display: none; }
-  .editor-actions > div { width: 100%; }
-  .editor-actions .button { flex: 1; }
-  .preview-scroll { padding: 20px 16px; }
+  .editor-shell {
+    padding: 15px 14px 90px;
+  }
+  .editor-meta {
+    grid-template-columns: 1fr;
+  }
+  .field-wide {
+    grid-column: auto;
+  }
+  .drop-zone {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .drop-zone > span {
+    min-width: 180px;
+  }
+  .editor-actions {
+    left: 0;
+    bottom: 58px;
+    padding: 8px 12px;
+  }
+  .editor-actions > span {
+    display: none;
+  }
+  .editor-actions > div {
+    width: 100%;
+  }
+  .editor-actions .button {
+    flex: 1;
+  }
+  .preview-scroll {
+    padding: 20px 16px;
+  }
 }
 </style>
