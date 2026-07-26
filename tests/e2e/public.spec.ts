@@ -112,6 +112,63 @@ test('theme toggle switches to light mode and persists the preference', async ({
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
 })
 
+test('home line art stays subtle and inverts without changing its composition', async ({
+  page,
+}) => {
+  await page.goto('/')
+  const asset = await page.evaluate(async () => {
+    const response = await fetch('/images/knowledge-home-line-art.png')
+    return {
+      contentType: response.headers.get('content-type'),
+      ok: response.ok,
+    }
+  })
+  expect(asset.ok).toBe(true)
+  expect(asset.contentType).toContain('image/png')
+
+  const stage = page.locator('.home-stage')
+  const themeToggle = page.locator('.theme-toggle')
+  await expect(stage).toBeVisible()
+
+  if ((await page.locator('html').getAttribute('data-theme')) === 'light') {
+    await themeToggle.click()
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+  }
+
+  const readArtStyle = () =>
+    stage.evaluate((element) => {
+      const style = getComputedStyle(element, '::before')
+      return {
+        backgroundImage: style.backgroundImage,
+        backgroundPosition: style.backgroundPosition,
+        backgroundSize: style.backgroundSize,
+        filter: style.filter,
+        mixBlendMode: style.mixBlendMode,
+        opacity: Number(style.opacity),
+        pointerEvents: style.pointerEvents,
+      }
+    })
+
+  const dark = await readArtStyle()
+  expect(dark.backgroundImage).toContain('knowledge-home-line-art.png')
+  expect(dark.filter).toContain('invert(1)')
+  expect(dark.mixBlendMode).toBe('screen')
+  expect(dark.opacity).toBeGreaterThan(0)
+  expect(dark.opacity).toBeLessThanOrEqual(0.1)
+  expect(dark.pointerEvents).toBe('none')
+
+  await themeToggle.click()
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
+  const light = await readArtStyle()
+  expect(light.backgroundImage).toBe(dark.backgroundImage)
+  expect(light.backgroundPosition).toBe(dark.backgroundPosition)
+  expect(light.backgroundSize).toBe(dark.backgroundSize)
+  expect(light.filter).toBe('none')
+  expect(light.mixBlendMode).toBe('multiply')
+  expect(light.opacity).toBeGreaterThan(0)
+  expect(light.opacity).toBeLessThanOrEqual(0.1)
+})
+
 test('branding and light theme controls keep their intended visual tokens', async ({
   page,
 }) => {
@@ -188,8 +245,11 @@ test('Mermaid enlarge control stays compact without inheriting diagram SVG width
 }) => {
   const fixture = await detectFixture(page)
   await page.goto(fixture.mermaidPath)
+  const diagram = page.locator('.mermaid-interactive').first()
+  const scrollViewport = diagram.locator('.mermaid-scroll-viewport')
   const openButton = page.locator('.mermaid-open-button').first()
   await expect(openButton).toBeVisible()
+  await expect(scrollViewport).toBeVisible()
 
   const metrics = await openButton.evaluate((element) => {
     const buttonStyle = getComputedStyle(element)
@@ -214,6 +274,24 @@ test('Mermaid enlarge control stays compact without inheriting diagram SVG width
   expect(metrics.whiteSpace).toBe('nowrap')
   expect(metrics.iconMinWidth).toBe('13px')
   expect(metrics.iconWidth).toBe('13px')
+
+  await expect
+    .poll(() =>
+      scrollViewport.evaluate((element) => element.scrollWidth - element.clientWidth),
+    )
+    .toBeGreaterThan(0)
+  const beforeScroll = await openButton.boundingBox()
+  await scrollViewport.evaluate((element) => {
+    element.scrollLeft = element.scrollWidth
+  })
+  await expect
+    .poll(() => scrollViewport.evaluate((element) => element.scrollLeft))
+    .toBeGreaterThan(0)
+  const afterScroll = await openButton.boundingBox()
+  expect(beforeScroll).toBeTruthy()
+  expect(afterScroll).toBeTruthy()
+  expect(Math.abs(afterScroll!.x - beforeScroll!.x)).toBeLessThanOrEqual(1)
+  expect(Math.abs(afterScroll!.y - beforeScroll!.y)).toBeLessThanOrEqual(1)
 
   await openButton.click()
   const viewer = page.getByRole('dialog')

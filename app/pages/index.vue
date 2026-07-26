@@ -33,7 +33,8 @@ const openSearch = () =>
 </script>
 
 <template>
-  <div class="home">
+  <div class="home-stage">
+    <div class="home">
     <header class="workspace-header">
       <div>
         <span class="eyebrow">PERSONAL KNOWLEDGE SYSTEM</span>
@@ -94,11 +95,30 @@ const openSearch = () =>
         </div>
       </section>
     </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.home { width: min(1120px, calc(100% - 48px)); margin: 0 auto; padding: 72px 0 90px; }
+.home-stage {
+  position: relative;
+  min-height: 100vh;
+  isolation: isolate;
+  overflow: clip;
+  background: var(--kb-bg);
+}
+.home-stage::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  pointer-events: none;
+  background: url('/images/knowledge-home-line-art.png') top center / 100% auto no-repeat;
+  opacity: var(--kb-home-art-opacity);
+  filter: var(--kb-home-art-filter);
+  mix-blend-mode: var(--kb-home-art-blend);
+}
+.home { position: relative; z-index: 1; width: min(1120px, calc(100% - 48px)); margin: 0 auto; padding: 72px 0 90px; }
 .workspace-header { display: grid; grid-template-columns: 1fr minmax(310px, 400px); align-items: end; gap: 60px; padding-bottom: 42px; border-bottom: 1px solid var(--kb-border); }
 h1 { margin: 11px 0 12px; max-width: 700px; font-size: clamp(34px, 5vw, 60px); line-height: 1; letter-spacing: -.055em; }
 .workspace-header p { max-width: 660px; margin: 0; color: var(--kb-text-muted); line-height: 1.7; }
@@ -147,5 +167,8 @@ h2 { margin: 0; font-size: 20px; letter-spacing: -.025em; }
   .folder-grid { grid-template-columns: 1fr; }
   .folder-card { min-height: 170px; }
   .home-columns { grid-template-columns: 1fr; }
+}
+@media (forced-colors: active) {
+  .home-stage::before { display: none; }
 }
 </style>

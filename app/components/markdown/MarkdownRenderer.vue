@@ -77,10 +77,19 @@ function cloneSvgForViewer(svg: SVGSVGElement) {
 }
 
 function prepareDiagram(node: HTMLElement, index: number) {
-  const svg = node.querySelector<SVGSVGElement>('svg')
+  let scrollViewport = node.querySelector<HTMLElement>('.mermaid-scroll-viewport')
+  const svg =
+    scrollViewport?.querySelector<SVGSVGElement>('svg') ||
+    node.querySelector<SVGSVGElement>('svg')
   if (!svg) return
 
   node.classList.add('mermaid-interactive')
+  if (!scrollViewport) {
+    scrollViewport = document.createElement('div')
+    scrollViewport.className = 'mermaid-scroll-viewport'
+    node.insertBefore(scrollViewport, node.firstChild)
+    scrollViewport.append(svg)
+  }
   const label = `${t('enlarge')} ${t('diagram')} ${index + 1}`
   let button = node.querySelector<HTMLButtonElement>('.mermaid-open-button')
   if (!button) {
@@ -612,16 +621,20 @@ watch([theme, locale], async () => {
 }
 .markdown-body .mermaid {
   position: relative;
-  padding: 18px;
   border: 1px solid var(--kb-border);
   border-radius: var(--kb-radius-md);
   background: var(--kb-diagram-bg);
-  overflow: auto;
+  overflow: hidden;
   text-align: center;
 }
 .markdown-body .mermaid-interactive {
-  padding-top: 52px;
   cursor: zoom-in;
+}
+.markdown-body .mermaid-scroll-viewport {
+  width: 100%;
+  min-width: 0;
+  padding: 52px 18px 18px;
+  overflow: auto;
 }
 .markdown-body .mermaid svg {
   display: block;

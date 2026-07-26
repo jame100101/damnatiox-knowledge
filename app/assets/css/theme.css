@@ -38,6 +38,9 @@
   --kb-shortcut-bg: #090b0d;
   --kb-shortcut-text: #cfd5db;
   --kb-elevated-shadow: 0 10px 30px rgb(0 0 0 / 18%);
+  --kb-home-art-opacity: 0.06;
+  --kb-home-art-filter: invert(1);
+  --kb-home-art-blend: screen;
   --kb-sidebar-width: 280px;
   --kb-right-sidebar-width: 240px;
   --kb-content-width: 820px;
@@ -106,6 +109,9 @@
   --kb-shortcut-text: #34443a;
   --kb-shadow: 0 16px 46px rgb(29 44 34 / 14%);
   --kb-elevated-shadow: 0 1px 2px rgb(29 44 34 / 8%), 0 10px 28px rgb(29 44 34 / 10%);
+  --kb-home-art-opacity: 0.075;
+  --kb-home-art-filter: none;
+  --kb-home-art-blend: multiply;
 }
 
 * {

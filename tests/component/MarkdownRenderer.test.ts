@@ -85,6 +85,16 @@ describe('MarkdownRenderer', () => {
     expect(openButton?.getAttribute('aria-label')).toBe('放大查看 流程图 1')
     expect(openButton).toBeTruthy()
 
+    const diagram = (wrapper.element as HTMLElement).querySelector<HTMLElement>(
+      '.mermaid-interactive',
+    )
+    const scrollViewport = diagram?.querySelector<HTMLElement>(
+      '.mermaid-scroll-viewport',
+    )
+    expect(scrollViewport?.querySelector('svg')).toBeTruthy()
+    expect(scrollViewport?.contains(openButton!)).toBe(false)
+    expect(openButton?.parentElement).toBe(diagram)
+
     const openButtonIcon = openButton!.querySelector<SVGSVGElement>('svg')
     expect(openButtonIcon).toBeTruthy()
     expect(openButtonIcon?.getAttribute('width')).toBeNull()
