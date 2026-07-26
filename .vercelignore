@@ -1,0 +1,12 @@
+.env
+.env.*
+!.env.example
+.tools
+.npm-cache
+node_modules
+.nuxt
+.output
+playwright-report
+test-results
+coverage
+*.log
