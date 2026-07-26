@@ -1,0 +1,17 @@
+.nuxt
+.output
+dist
+node_modules
+.npm-cache
+.tools
+.tools-gh.zip
+.env
+.env.*
+!.env.example
+.vercel
+playwright-report
+test-results
+coverage
+*.log
+.DS_Store
+Thumbs.db
