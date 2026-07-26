@@ -23,6 +23,15 @@ const { t } = useLocale()
 function toggleExpanded() {
   if (hasChildren.value) expanded.value = !expanded.value
 }
+async function handleLabelClick() {
+  if (hasChildren.value && expanded.value) {
+    expanded.value = false
+    return
+  }
+
+  if (hasChildren.value) expanded.value = true
+  await navigateTo(folderPublicPath(props.node.id, props.allFolders))
+}
 watch(
   [() => props.currentFolderId, () => props.currentDocumentId],
   () => {
@@ -57,9 +66,13 @@ watch(
         <ChevronRight :size="13" :class="{ rotated: expanded }" />
       </button>
       <component :is="expanded ? FolderOpen : FolderIcon" :size="15" class="tree-icon" />
-      <NuxtLink :to="folderPublicPath(node.id, allFolders)" class="tree-label">
+      <a
+        :href="folderPublicPath(node.id, allFolders)"
+        class="tree-label"
+        @click.stop.prevent="handleLabelClick"
+      >
         {{ node.name }}
-      </NuxtLink>
+      </a>
       <span class="tree-count">{{ node.documentCount }}</span>
     </div>
     <ul v-if="expanded" class="tree-children">

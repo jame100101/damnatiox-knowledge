@@ -73,13 +73,25 @@ test('folder labels collapse the current folder and the TOC remains sticky', asy
 }) => {
   await page.goto('/knowledge/java-backend')
   await page.waitForLoadState('networkidle')
-  const folderRow = page.locator('.tree-row').filter({ hasText: 'Java 后端' }).first()
+  await page.locator('.tree-label').filter({ hasText: 'Spring' }).click()
+  await page.locator('.tree-label').filter({ hasText: 'Spring Boot' }).click()
+  await page
+    .locator('.tree-document')
+    .filter({ hasText: 'Spring Boot 简介' })
+    .click()
+  await expect(page).toHaveURL(
+    /\/knowledge\/java-backend\/spring\/spring-boot\/spring-boot-introduction$/,
+  )
+
+  const folderRow = page.locator('.tree-row').filter({ hasText: 'Spring Boot' }).first()
   const childList = folderRow.locator('xpath=..').locator(':scope > ul.tree-children')
   await expect(childList).toBeVisible()
   await folderRow.locator('.tree-label').click()
   await expect(childList).toBeHidden()
+  await expect(page).toHaveURL(
+    /\/knowledge\/java-backend\/spring\/spring-boot\/spring-boot-introduction$/,
+  )
 
-  await page.goto('/knowledge/java-backend/spring/spring-boot/spring-boot-introduction')
   await page.locator('.document-page').evaluate((element) => {
     element.style.minHeight = '2200px'
   })
