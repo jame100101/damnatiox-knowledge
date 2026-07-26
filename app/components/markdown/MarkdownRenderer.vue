@@ -651,6 +651,11 @@ watch([theme, locale], async () => {
 .markdown-body .katex {
   color: var(--kb-text);
 }
+.markdown-body .katex-display {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
 
 .diagram-viewer-overlay {
   position: fixed;

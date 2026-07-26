@@ -1,42 +1,103 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
+
+type KnowledgeFixture = {
+  navigation: Array<{ path: string; heading: string }>
+  documentPath: string
+  searchQuery: string
+  searchResult: string
+  lightFolderPath: string
+  mermaidPath: string
+  collapseFolder: string
+  treeFolders: string[]
+  treeDocument: string
+}
+
+const demoFixture: KnowledgeFixture = {
+  navigation: [
+    { path: '/knowledge/java-backend', heading: 'Java 后端' },
+    { path: '/knowledge/java-backend/spring', heading: 'Spring' },
+    {
+      path: '/knowledge/java-backend/spring/spring-boot',
+      heading: 'Spring Boot',
+    },
+    {
+      path: '/knowledge/java-backend/spring/spring-boot/spring-boot-introduction',
+      heading: 'Spring Boot 简介',
+    },
+  ],
+  documentPath: '/knowledge/java-backend/spring/spring-boot/spring-boot-introduction',
+  searchQuery: 'chunking',
+  searchResult: '文档切分基础',
+  lightFolderPath: '/knowledge/java-backend',
+  mermaidPath: '/knowledge/java-backend/spring/spring-boot/spring-boot-introduction',
+  collapseFolder: 'Spring Boot',
+  treeFolders: ['Spring', 'Spring Boot'],
+  treeDocument: 'Spring Boot 简介',
+}
+
+const agentFixture: KnowledgeFixture = {
+  navigation: [
+    { path: '/knowledge/agent-development', heading: 'Agent开发' },
+    {
+      path: '/knowledge/agent-development/agent-basics',
+      heading: 'Agent基础',
+    },
+    {
+      path: '/knowledge/agent-development/agent-basics/swe-agent-basics-aci-1bhr0z7',
+      heading: 'SWE Agent 基础概念与 ACI',
+    },
+  ],
+  documentPath:
+    '/knowledge/agent-development/agent-basics/swe-agent-basics-aci-1bhr0z7',
+  searchQuery: 'SWE-bench',
+  searchResult: 'SWE Agent 基础概念与 ACI',
+  lightFolderPath: '/knowledge/agent-development',
+  mermaidPath: '/knowledge/agent-development/agent-1yc9ni5/agent-shipping-01oz6pm',
+  collapseFolder: 'Agent基础',
+  treeFolders: ['Agent基础'],
+  treeDocument: 'SWE Agent 基础概念与 ACI',
+}
+
+async function detectFixture(page: Page): Promise<KnowledgeFixture> {
+  await page.goto('/')
+  await page.waitForLoadState('networkidle')
+  await expect(page.locator('.folder-card').first()).toBeVisible()
+
+  return (await page.locator('.demo-strip').isVisible()) ? demoFixture : agentFixture
+}
 
 test('public knowledge flow renders dynamic folder and document routes', async ({
   page,
 }) => {
-  await page.goto('/')
+  const fixture = await detectFixture(page)
   await expect(page.getByRole('heading', { name: 'Damnatiox Knowledge' })).toBeVisible()
-  await page
-    .getByRole('link', { name: /Java 后端/ })
-    .first()
-    .click()
-  await expect(page.getByRole('heading', { name: 'Java 后端' })).toBeVisible()
-  await page
-    .getByRole('link', { name: /Spring/ })
-    .first()
-    .click()
-  await page
-    .getByRole('link', { name: /Spring Boot/ })
-    .first()
-    .click()
-  await page
-    .getByRole('link', { name: /Spring Boot 简介/ })
-    .first()
-    .click()
-  await expect(page.getByRole('heading', { name: 'Spring Boot 简介' })).toBeVisible()
+
+  for (const step of fixture.navigation) {
+    const link = page.locator(`main a[href="${step.path}"]`).first()
+    await expect(link).toBeVisible()
+    await link.click()
+    await expect(
+      page.getByRole('heading', { name: step.heading, exact: true }).first(),
+    ).toBeVisible()
+  }
+
+  expect(new URL(page.url()).pathname).toBe(fixture.documentPath)
   await expect(page.getByText('知识库').first()).toBeVisible()
-  await expect(page.getByText('Java 后端').first()).toBeVisible()
 })
 
 test('global search opens with keyboard shortcut and finds a document', async ({
   page,
 }) => {
-  await page.goto('/')
-  await page.waitForLoadState('networkidle')
+  const fixture = await detectFixture(page)
   await page.keyboard.press('Control+K')
   await expect(page.getByRole('dialog', { name: '搜索知识库' })).toBeVisible()
-  await page.getByLabel('搜索关键词').fill('chunking')
+  await page.getByLabel('搜索关键词').fill(fixture.searchQuery)
   await expect(
-    page.getByRole('dialog').getByRole('link', { name: /文档切分基础/ }),
+    page
+      .getByRole('dialog')
+      .locator('.search-results a')
+      .filter({ hasText: fixture.searchResult })
+      .first(),
   ).toBeVisible()
 })
 
@@ -53,19 +114,25 @@ test('theme toggle switches to light mode and persists the preference', async ({
 
 test('branding and light theme controls keep their intended visual tokens', async ({
   page,
-  request,
 }) => {
-  await page.goto('/')
+  const fixture = await detectFixture(page)
   await expect(page).toHaveTitle('Knowledge Base')
   await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', '/favicon.svg')
 
-  const favicon = await request.get('/favicon.svg')
-  expect(favicon.ok()).toBe(true)
-  expect(favicon.headers()['content-type']).toContain('image/svg+xml')
-  expect(await favicon.text()).toContain('<svg')
+  const favicon = await page.evaluate(async () => {
+    const response = await fetch('/favicon.svg')
+    return {
+      body: await response.text(),
+      contentType: response.headers.get('content-type'),
+      status: response.status,
+    }
+  })
+  expect(favicon.status).toBe(200)
+  expect(favicon.contentType).toContain('image/svg+xml')
+  expect(favicon.body).toContain('<svg')
 
   await page.getByRole('button', { name: '切换到浅色模式' }).click()
-  await page.goto('/knowledge/java-backend')
+  await page.goto(fixture.lightFolderPath)
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
 
   const lightTokens = await page.evaluate(() => {
@@ -119,8 +186,9 @@ test('branding and light theme controls keep their intended visual tokens', asyn
 test('Mermaid enlarge control stays compact without inheriting diagram SVG width', async ({
   page,
 }) => {
-  await page.goto('/knowledge/java-backend/spring/spring-boot/spring-boot-introduction')
-  const openButton = page.locator('.mermaid-open-button')
+  const fixture = await detectFixture(page)
+  await page.goto(fixture.mermaidPath)
+  const openButton = page.locator('.mermaid-open-button').first()
   await expect(openButton).toBeVisible()
 
   const metrics = await openButton.evaluate((element) => {
@@ -146,6 +214,13 @@ test('Mermaid enlarge control stays compact without inheriting diagram SVG width
   expect(metrics.whiteSpace).toBe('nowrap')
   expect(metrics.iconMinWidth).toBe('13px')
   expect(metrics.iconWidth).toBe('13px')
+
+  await openButton.click()
+  const viewer = page.getByRole('dialog')
+  await expect(viewer).toBeVisible()
+  await expect(viewer.locator('.diagram-viewer-canvas svg')).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(viewer).toBeHidden()
 })
 
 test('language selector switches public UI between all supported locales', async ({
@@ -168,23 +243,30 @@ test('language selector switches public UI between all supported locales', async
 test('folder labels collapse the current folder and the TOC remains sticky', async ({
   page,
 }) => {
-  await page.goto('/knowledge/java-backend')
+  const fixture = await detectFixture(page)
+  await page.goto(fixture.navigation[0]!.path)
   await page.waitForLoadState('networkidle')
-  await page.locator('.tree-label').filter({ hasText: 'Spring' }).click()
-  await page.locator('.tree-label').filter({ hasText: 'Spring Boot' }).click()
-  await page.locator('.tree-document').filter({ hasText: 'Spring Boot 简介' }).click()
-  await expect(page).toHaveURL(
-    /\/knowledge\/java-backend\/spring\/spring-boot\/spring-boot-introduction$/,
-  )
 
-  const folderRow = page.locator('.tree-row').filter({ hasText: 'Spring Boot' }).first()
+  for (const folder of fixture.treeFolders) {
+    await page.locator('.tree-label').filter({ hasText: folder }).first().click()
+  }
+  await page
+    .locator('.tree-document')
+    .filter({ hasText: fixture.treeDocument })
+    .first()
+    .click()
+  await expect(page.locator('.document-page')).toBeVisible()
+
+  const folderRow = page
+    .locator('.tree-label')
+    .filter({ hasText: fixture.collapseFolder })
+    .first()
+    .locator('xpath=..')
   const childList = folderRow.locator('xpath=..').locator(':scope > ul.tree-children')
   await expect(childList).toBeVisible()
   await folderRow.locator('.tree-label').click()
   await expect(childList).toBeHidden()
-  await expect(page).toHaveURL(
-    /\/knowledge\/java-backend\/spring\/spring-boot\/spring-boot-introduction$/,
-  )
+  expect(new URL(page.url()).pathname).toBe(fixture.documentPath)
 
   await page.locator('.document-page').evaluate((element) => {
     element.style.minHeight = '2200px'
@@ -196,7 +278,8 @@ test('folder labels collapse the current folder and the TOC remains sticky', asy
 
 test('mobile layout has no horizontal overflow', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
-  await page.goto('/knowledge/java-backend/spring/spring-boot/spring-boot-introduction')
+  const fixture = await detectFixture(page)
+  await page.goto(fixture.documentPath)
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
   )
