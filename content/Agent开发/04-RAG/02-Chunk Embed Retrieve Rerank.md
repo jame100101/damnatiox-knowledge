@@ -70,3 +70,22 @@ Cross-encoder 或 LLM reranker 同时阅读 query 与候选，通常比单独向
 | hybrid + rerank |           |     |                   |      |
 
 再对失败案例分类：解析丢失、切分错误、术语不匹配、过滤错误、排序错误、上下文截断。只有分类后，优化才有方向。
+
+<!-- agent-learning-expansion:v2 -->
+## 6. Chunk 的目标是“可检索且可解释”
+
+Chunk 既要足够小以便精确命中，也要保留回答问题所需的完整语义。除正文外应携带 `document_id`、章节路径、页码或行号、版本、ACL 与父块 ID。父子检索常用小块召回、父块补全上下文，可在精确率和可读性间折中。
+
+## 7. Dense、Sparse 与融合
+
+Dense embedding 对同义表达和语义相似有效，BM25 等 sparse 检索对错误码、函数名、编号和罕见实体更稳。Reciprocal Rank Fusion 可在不直接比较两种分数尺度时融合排名：
+
+$$
+RRF(d) = \sum_{r \in rankings}\frac{1}{k + rank_r(d)}
+$$
+
+`k` 用于降低头部排名差异的剧烈影响。融合后仍需在带真实查询和相关性标注的数据集上调参。
+
+## 8. Rerank 与 Context Packing
+
+Reranker 对 query-document 对做更精细判断，通常成本高于初筛，所以只处理候选集合。Context packing 不是简单取前 N：需要去重相邻片段、保留多来源覆盖、按引用 ID 包装、控制单来源占比，并为问题中不同子目标分配上下文预算。

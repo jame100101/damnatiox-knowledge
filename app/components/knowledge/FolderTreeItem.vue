@@ -19,8 +19,12 @@ const expanded = ref((props.level || 0) < 1)
 const hasChildren = computed(
   () => props.node.children.length > 0 || props.node.documents.length > 0,
 )
+const { t } = useLocale()
+function toggleExpanded() {
+  if (hasChildren.value) expanded.value = !expanded.value
+}
 watch(
-  () => [props.currentFolderId, props.currentDocumentId],
+  [() => props.currentFolderId, () => props.currentDocumentId],
   () => {
     if (
       props.currentFolderId === props.node.id ||
@@ -36,15 +40,19 @@ watch(
   <li>
     <div
       class="tree-row"
-      :class="{ active: currentFolderId === node.id && !currentDocumentId }"
+      :class="{
+        active: currentFolderId === node.id && !currentDocumentId,
+        expandable: hasChildren,
+      }"
       :style="{ '--depth': level || 0 }"
+      @click="toggleExpanded"
     >
       <button
         class="tree-toggle"
         type="button"
         :disabled="!hasChildren"
-        :aria-label="expanded ? '折叠' : '展开'"
-        @click="expanded = !expanded"
+        :aria-label="expanded ? t('collapseFolder') : t('expandFolder')"
+        @click.stop="toggleExpanded"
       >
         <ChevronRight :size="13" :class="{ rotated: expanded }" />
       </button>
@@ -93,13 +101,14 @@ li, ul { list-style: none; margin: 0; padding: 0; }
   transition: background 140ms, color 140ms;
 }
 .tree-row:hover, .tree-row.active { background: var(--kb-surface-hover); color: var(--kb-text); }
+.tree-row.expandable { cursor: pointer; }
 .tree-row.active { box-shadow: inset 2px 0 var(--kb-accent); }
 .tree-toggle { width: 18px; height: 24px; display: grid; place-items: center; border: 0; padding: 0; background: none; color: var(--kb-icon); cursor: pointer; }
 .tree-toggle:disabled { opacity: 0; }
 .tree-toggle svg { transition: transform 140ms; }
 .tree-toggle .rotated { transform: rotate(90deg); }
 .tree-icon { color: var(--kb-icon); flex: none; }
-.tree-label { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tree-label { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
 .tree-count { font: 10px/1.4 monospace; color: var(--kb-text-subtle); }
 .tree-document {
   min-height: 30px;

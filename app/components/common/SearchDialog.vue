@@ -5,6 +5,7 @@ import { documentPublicPath, folderPublicPath } from '~/utils/folders'
 const props = defineProps<{ open: boolean }>()
 const emit = defineEmits<{ close: [] }>()
 const { folders, documents } = useKnowledge()
+const { t } = useLocale()
 const query = ref('')
 const input = ref<HTMLInputElement>()
 const normalized = computed(() => query.value.trim().toLocaleLowerCase())
@@ -52,7 +53,7 @@ function close() {
         class="search-dialog"
         role="dialog"
         aria-modal="true"
-        aria-label="搜索知识库"
+        :aria-label="t('searchTitle')"
         @keydown.esc="close"
       >
         <header>
@@ -60,16 +61,16 @@ function close() {
           <input
             ref="input"
             v-model="query"
-            placeholder="搜索标题、正文、标签…"
-            aria-label="搜索关键词"
+            :placeholder="t('searchPlaceholder')"
+            :aria-label="t('searchKeyword')"
           />
-          <button type="button" aria-label="关闭搜索" @click="close">
+          <button type="button" :aria-label="t('closeSearch')" @click="close">
             <X :size="17" />
           </button>
         </header>
         <div class="search-results">
           <template v-if="folderResults.length">
-            <span class="result-label">文件夹</span>
+            <span class="result-label">{{ t('folderResults') }}</span>
             <NuxtLink
               v-for="folder in folderResults"
               :key="folder.id"
@@ -84,7 +85,7 @@ function close() {
               <CornerDownLeft :size="13" />
             </NuxtLink>
           </template>
-          <span class="result-label">{{ query ? '文档' : '最近文档' }}</span>
+          <span class="result-label">{{ query ? t('documents') : t('recentDocuments') }}</span>
           <NuxtLink
             v-for="document in documentResults"
             :key="document.id"
@@ -102,10 +103,10 @@ function close() {
             v-if="!folderResults.length && !documentResults.length"
             class="no-results"
           >
-            没有找到匹配内容
+            {{ t('noResults') }}
           </div>
         </div>
-        <footer><kbd>↑↓</kbd> 浏览 <kbd>Enter</kbd> 打开 <kbd>Esc</kbd> 关闭</footer>
+        <footer><kbd>↑↓</kbd> {{ t('browse') }} <kbd>Enter</kbd> {{ t('open') }} <kbd>Esc</kbd> {{ t('close') }}</footer>
       </section>
     </div>
   </Teleport>

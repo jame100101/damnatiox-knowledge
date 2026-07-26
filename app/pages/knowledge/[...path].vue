@@ -16,6 +16,7 @@ import {
 } from '~/utils/folders'
 
 const route = useRoute()
+const { t, dateLocale } = useLocale()
 const { folders, documents, load, loaded } = useKnowledge()
 await load()
 const segments = computed(() => {
@@ -66,7 +67,7 @@ if (loaded.value && !folder.value && !document.value) {
   throw createError({ statusCode: 404, statusMessage: '未找到对应知识路径' })
 }
 useHead(() => ({
-  title: document.value?.title || folder.value?.name || '知识库',
+  title: document.value?.title || folder.value?.name || t('knowledgeBase'),
   meta: [
     {
       name: 'description',
@@ -88,25 +89,25 @@ useHead(() => ({
         <h1>{{ document.title }}</h1>
         <p v-if="document.description">{{ document.description }}</p>
         <div class="document-meta">
-          <span><Folder :size="13" /> {{ folder?.name || '未分类' }}</span>
-          <span><CalendarDays :size="13" /> {{ new Date(document.updated_at).toLocaleDateString('zh-CN') }}</span>
-          <span>{{ document.reading_time || 1 }} MIN READ</span>
+          <span><Folder :size="13" /> {{ folder?.name || t('uncategorized') }}</span>
+          <span><CalendarDays :size="13" /> {{ new Date(document.updated_at).toLocaleDateString(dateLocale) }}</span>
+          <span>{{ document.reading_time || 1 }} {{ t('minRead') }}</span>
         </div>
         <div class="tags"><span v-for="tag in document.tags" :key="tag" class="tag"># {{ tag }}</span></div>
       </header>
       <MarkdownRenderer :source="document.content" />
       <nav class="document-nav">
         <NuxtLink v-if="previous" :to="documentPublicPath(previous, folders)">
-          <ArrowLeft :size="15" /><span><small>上一篇</small><strong>{{ previous.title }}</strong></span>
+          <ArrowLeft :size="15" /><span><small>{{ t('previous') }}</small><strong>{{ previous.title }}</strong></span>
         </NuxtLink>
         <span v-else />
         <NuxtLink v-if="next" :to="documentPublicPath(next, folders)" class="next">
-          <span><small>下一篇</small><strong>{{ next.title }}</strong></span><ArrowRight :size="15" />
+          <span><small>{{ t('next') }}</small><strong>{{ next.title }}</strong></span><ArrowRight :size="15" />
         </NuxtLink>
       </nav>
       <section v-if="related.length" class="related">
         <span class="eyebrow">RELATED NOTES</span>
-        <h2>相关文章</h2>
+        <h2>{{ t('relatedArticles') }}</h2>
         <div>
           <NuxtLink v-for="item in related" :key="item.id" :to="documentPublicPath(item, folders)">
             <FileText :size="15" /><span><strong>{{ item.title }}</strong><small>{{ item.description }}</small></span>
@@ -120,33 +121,33 @@ useHead(() => ({
   <main v-else-if="folder" class="folder-page">
     <Breadcrumbs :items="breadcrumbs" />
     <header>
-      <span class="eyebrow">KNOWLEDGE FOLDER</span>
+      <span class="eyebrow">{{ t('folderEyebrow') }}</span>
       <div class="folder-title"><span><Folder :size="26" /></span><h1>{{ folder.name }}</h1></div>
-      <p>{{ folder.description || '这个文件夹正在持续整理中。' }}</p>
+      <p>{{ folder.description || t('organizing') }}</p>
       <div class="folder-stats">
-        <span>{{ childFolders.length }} 子目录</span><span>{{ folderDocuments.length }} 篇文档</span>
+        <span>{{ childFolders.length }} {{ t('subdirectories') }}</span><span>{{ folderDocuments.length }} {{ t('documents') }}</span>
       </div>
     </header>
     <section v-if="childFolders.length">
-      <div class="section-title"><h2>子目录</h2><span>{{ childFolders.length }}</span></div>
+      <div class="section-title"><h2>{{ t('subdirectories') }}</h2><span>{{ childFolders.length }}</span></div>
       <div class="child-grid">
         <NuxtLink v-for="item in childFolders" :key="item.id" :to="folderPublicPath(item.id, folders)">
           <span class="mini-folder"><Folder :size="17" /></span>
-          <span><strong>{{ item.name }}</strong><small>{{ item.description || '知识子目录' }}</small></span>
+          <span><strong>{{ item.name }}</strong><small>{{ item.description || t('knowledgeSubfolder') }}</small></span>
           <ArrowRight :size="15" />
         </NuxtLink>
       </div>
     </section>
     <section>
-      <div class="section-title"><h2>文档</h2><span>{{ folderDocuments.length }}</span></div>
+      <div class="section-title"><h2>{{ t('documents') }}</h2><span>{{ folderDocuments.length }}</span></div>
       <div v-if="folderDocuments.length" class="document-list">
         <NuxtLink v-for="item in folderDocuments" :key="item.id" :to="documentPublicPath(item, folders)">
           <FileText :size="16" />
           <span><strong>{{ item.title }}</strong><small>{{ item.description }}</small></span>
-          <time>{{ new Date(item.updated_at).toLocaleDateString('zh-CN') }}</time>
+          <time>{{ new Date(item.updated_at).toLocaleDateString(dateLocale) }}</time>
         </NuxtLink>
       </div>
-      <div v-else class="empty-state">此文件夹暂无已发布文档。</div>
+      <div v-else class="empty-state">{{ t('emptyFolder') }}</div>
     </section>
   </main>
 </template>
@@ -173,7 +174,15 @@ useHead(() => ({
 .related a { display: flex; gap: 10px; padding: 13px; border: 1px solid var(--kb-border); border-radius: var(--kb-radius-sm); color: var(--kb-text-muted); }
 .related a span { display: grid; gap: 3px; }
 .related a small { color: var(--kb-text-subtle); }
-.reader-grid > aside { padding-top: 89px; }
+.reader-grid > aside {
+  position: sticky;
+  top: 24px;
+  align-self: start;
+  max-height: calc(100vh - 48px);
+  margin-top: 89px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
 .folder-page { width: min(960px, calc(100% - 48px)); margin: 0 auto; padding: 38px 0 100px; }
 .folder-page > header { padding: 47px 0 45px; border-bottom: 1px solid var(--kb-border); }
 .folder-title { display: flex; align-items: center; gap: 14px; margin: 13px 0; }

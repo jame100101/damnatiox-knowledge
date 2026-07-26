@@ -2,6 +2,7 @@
 import { Menu, PanelLeftClose, RefreshCw, Search, Settings, X } from 'lucide-vue-next'
 const route = useRoute()
 const { folders, documents, loading, updateAvailable, load, isDemo } = useKnowledge()
+const { t } = useLocale()
 const searchOpen = ref(false)
 const mobileOpen = ref(false)
 const collapsed = useCookie('kb-sidebar-collapsed', { default: () => false })
@@ -50,13 +51,13 @@ watch(
 <template>
   <div class="app-shell" :class="{ collapsed }">
     <header class="mobile-header">
-      <button type="button" aria-label="打开目录" @click="mobileOpen = true">
+      <button type="button" :aria-label="t('openNavigation')" @click="mobileOpen = true">
         <Menu :size="20" />
       </button>
       <NuxtLink to="/" class="mobile-brand"
         ><BrandMark /><strong>Damnatiox</strong></NuxtLink
       >
-      <button type="button" aria-label="搜索" @click="searchOpen = true">
+      <button type="button" :aria-label="t('search')" @click="searchOpen = true">
         <Search :size="19" />
       </button>
     </header>
@@ -72,14 +73,14 @@ watch(
         <button
           class="icon-button mobile-close"
           type="button"
-          aria-label="关闭目录"
+          :aria-label="t('closeNavigation')"
           @click="mobileOpen = false"
         >
           <X :size="17" />
         </button>
       </div>
       <button class="search-trigger" type="button" @click="searchOpen = true">
-        <Search :size="15" /><span>搜索知识库</span><kbd>⌘ K</kbd>
+        <Search :size="15" /><span>{{ t('searchKnowledge') }}</span><kbd>⌘ K</kbd>
       </button>
       <div class="sidebar-label">
         <span>LIBRARY</span><span>{{ documents.length }}</span>
@@ -97,9 +98,10 @@ watch(
         />
       </div>
       <footer class="sidebar-footer">
-        <NuxtLink to="/admin"><Settings :size="15" /> 管理后台</NuxtLink>
+        <NuxtLink to="/admin"><Settings :size="15" /> {{ t('admin') }}</NuxtLink>
+        <LanguageSelector />
         <ThemeToggle />
-        <button type="button" aria-label="收起侧栏" @click="collapsed = true">
+        <button type="button" :aria-label="t('collapseSidebar')" @click="collapsed = true">
           <PanelLeftClose :size="16" />
         </button>
       </footer>
@@ -117,7 +119,7 @@ watch(
     <main class="main-pane">
       <div v-if="isDemo" class="demo-strip">
         <span><i /> DEMO DATA</span>
-        <span>连接 Supabase 后自动切换到跨设备数据</span>
+        <span>{{ t('demoConnected') }}</span>
       </div>
       <button
         v-if="updateAvailable"
@@ -125,7 +127,7 @@ watch(
         type="button"
         @click="load(true)"
       >
-        <RefreshCw :size="15" /> 知识库已有更新，点击刷新
+        <RefreshCw :size="15" /> {{ t('updateAvailable') }}
       </button>
       <slot />
     </main>

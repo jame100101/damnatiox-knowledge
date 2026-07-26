@@ -3,10 +3,11 @@ import { ChevronRight } from 'lucide-vue-next'
 import type { Breadcrumb } from '~/types/knowledge'
 
 defineProps<{ items: Breadcrumb[] }>()
+const { t } = useLocale()
 </script>
 
 <template>
-  <nav class="breadcrumbs" aria-label="面包屑">
+  <nav class="breadcrumbs" :aria-label="t('breadcrumbs')">
     <template v-for="(item, index) in items" :key="item.path">
       <ChevronRight v-if="index" :size="13" aria-hidden="true" />
       <NuxtLink :to="item.path" :aria-current="index === items.length - 1 ? 'page' : undefined">

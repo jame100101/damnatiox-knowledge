@@ -76,3 +76,43 @@ Agent 并不适合“目标完全模糊”的任务。理想任务虽然路径�
 
 - [Anthropic：Building effective agents](https://www.anthropic.com/research/building-effective-agents)
 - [OpenAI：A practical guide to building agents](https://openai.com/business/guides-and-resources/a-practical-guide-to-building-ai-agents/)
+
+<!-- agent-learning-expansion:v2 -->
+## 6. 用“路径不确定性”评估是否值得使用 Agent
+
+可把候选任务按五个维度打分，每项 0～2 分：
+
+| 维度 | 0 分 | 1 分 | 2 分 |
+| --- | --- | --- | --- |
+| 路径不确定性 | 步骤固定 | 少量分支 | 必须边做边决定 |
+| 环境反馈 | 不依赖外部状态 | 读取少量数据 | 多轮工具反馈决定下一步 |
+| 语义判断 | 规则可完整编码 | 规则加模型分类 | 例外多、需综合判断 |
+| 可验证性 | 无清晰验证 | 部分可检查 | 有测试、约束或证据闭环 |
+| 失败代价 | 高且不可逆 | 可审批 | 低、可回滚或隔离 |
+
+前三项高表示 Agent 可能有价值；“可验证性”低或“失败代价”高则表示需要先建设 Harness、审批点与回滚，而不是直接增加自主轮次。
+
+```mermaid
+flowchart TD
+  T[候选任务] --> D{路径能否预先写定}
+  D -->|能| W[Workflow]
+  D -->|难| F{环境反馈能否验证进展}
+  F -->|很弱| P[先改造任务与成功标准]
+  F -->|可以| R{动作是否可逆且权限可控}
+  R -->|是| A[受约束 Agent]
+  R -->|否| H[Agent 建议 + 人工提交]
+```
+
+## 7. 典型适合与不适合任务
+
+**较适合**：跨多个来源的研究、代码库定位与修改、故障诊断、复杂工单处理、需要试探和验证的浏览器操作。它们的共同点是下一步依赖刚获得的信息。
+
+**更适合 Workflow**：财务结算、固定审批、数据同步、字段转换、合规报表生成。即使中间用 LLM 抽取或分类，主控制流仍应由代码拥有。
+
+**先重构任务再考虑 Agent**：目标只有“做得更好”、没有成功标准；工具返回没有稳定 schema；数据权限没有边界；任何一步失败都会产生不可逆影响。
+
+## 8. 小规模验证方法
+
+先收集 30～100 个真实任务样本，建立普通 LLM 或 Workflow 基线，再比较 Agent 版本的任务完成率、人工接管率、P95 延迟、单任务成本和副作用错误。若 Agent 只提升了语言流畅度，却显著增加路径波动与运维成本，应回退到更简单结构。
+
+参考：[OpenAI Agent 构建指南](https://openai.com/business/guides-and-resources/a-practical-guide-to-building-ai-agents/)与 [Anthropic Agent 模式](https://www.anthropic.com/engineering/building-effective-agents)都建议从简单方案开始，只在任务复杂度确实需要时增加 Agent 控制。

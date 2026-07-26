@@ -15,6 +15,27 @@ vi.mock('mermaid', () => ({
 describe('MarkdownRenderer', () => {
   beforeEach(() => {
     vi.stubGlobal('useTheme', () => ({ theme: ref('dark') }))
+    vi.stubGlobal('useLocale', () => ({
+      locale: ref('zh-CN'),
+      t: (key: string) =>
+        (
+          ({
+            copy: '复制',
+            copied: '已复制',
+            codeLanguages: '代码语言',
+            enlarge: '放大查看',
+            diagram: '流程图',
+            diagramOpenHint: '也可直接点击图表',
+            diagramViewer: '流程图查看器',
+            close: '关闭',
+            closeDiagram: '关闭流程图',
+            zoomOut: '缩小流程图',
+            zoomIn: '放大流程图',
+            resetDiagram: '复位流程图',
+            diagramHelp: '滚轮缩放 · 拖拽移动 · 双击复位',
+          }) as Record<string, string>
+        )[key] || key,
+    }))
     mermaidMocks.initialize.mockReset()
     mermaidMocks.run.mockReset()
     mermaidMocks.run.mockImplementation(async ({ nodes }: { nodes: HTMLElement[] }) => {
@@ -61,7 +82,7 @@ describe('MarkdownRenderer', () => {
       wrapper.element as HTMLElement
     ).querySelector<HTMLButtonElement>('.mermaid-open-button')
     expect(openButton?.textContent).toBe('放大查看')
-    expect(openButton?.getAttribute('aria-label')).toBe('放大查看流程图 1')
+    expect(openButton?.getAttribute('aria-label')).toBe('放大查看 流程图 1')
 
     openButton?.click()
     await nextTick()
@@ -83,5 +104,41 @@ describe('MarkdownRenderer', () => {
     expect(document.body.style.overflow).toBe('')
 
     wrapper.unmount()
+  })
+
+  it('switches grouped code examples by language tab', async () => {
+    const wrapper = mount(MarkdownRenderer, {
+      props: {
+        source: `\`\`\`python group=agent-loop label=Python
+print("observe")
+\`\`\`
+
+\`\`\`rust group=agent-loop label=Rust
+println!("observe");
+\`\`\`
+
+\`\`\`typescript group=agent-loop label=TypeScript
+console.log("observe")
+\`\`\``,
+      },
+    })
+
+    await flushPromises()
+
+    const tabs = wrapper.findAll<HTMLButtonElement>('[role="tab"]')
+    expect(tabs.map((tab) => tab.text())).toEqual(['Python', 'Rust', 'TypeScript'])
+    expect(tabs[0]?.attributes('aria-selected')).toBe('true')
+    expect(
+      wrapper.findAll<HTMLPreElement>('[role="tabpanel"]')[1]?.element.hidden,
+    ).toBe(true)
+
+    await tabs[1]?.trigger('click')
+    expect(tabs[1]?.attributes('aria-selected')).toBe('true')
+    expect(
+      wrapper.findAll<HTMLPreElement>('[role="tabpanel"]')[1]?.element.hidden,
+    ).toBe(false)
+
+    await tabs[1]?.trigger('keydown', { key: 'ArrowRight' })
+    expect(tabs[2]?.attributes('aria-selected')).toBe('true')
   })
 })

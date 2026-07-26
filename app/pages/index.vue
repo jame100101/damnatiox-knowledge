@@ -10,7 +10,8 @@ import {
 } from 'lucide-vue-next'
 import { buildFolderTree, documentPublicPath, folderPublicPath } from '~/utils/folders'
 
-useHead({ title: '知识工作台' })
+const { t, dateLocale } = useLocale()
+useHead(() => ({ title: t('homeTitle') }))
 const { folders, documents, load } = useKnowledge()
 await callOnce('home-knowledge', () => load())
 const tree = computed(() => buildFolderTree(folders.value, documents.value))
@@ -37,33 +38,33 @@ const openSearch = () =>
       <div>
         <span class="eyebrow">PERSONAL KNOWLEDGE SYSTEM</span>
         <h1>Damnatiox Knowledge</h1>
-        <p>把工程实践、系统原理与 AI 开发经验组织成可持续维护的知识结构。</p>
+        <p>{{ t('homeTagline') }}</p>
       </div>
       <button class="command-search" type="button" @click="openSearch">
         <Search :size="17" />
-        <span>搜索所有知识、标签和正文</span>
+        <span>{{ t('searchAll') }}</span>
         <kbd>Ctrl K</kbd>
       </button>
     </header>
 
-    <section class="metrics" aria-label="知识库统计">
-      <div><Folder :size="15" /><span><strong>{{ folders.length }}</strong><small>文件夹</small></span></div>
-      <div><FileText :size="15" /><span><strong>{{ documents.length }}</strong><small>已发布文档</small></span></div>
-      <div><Tags :size="15" /><span><strong>{{ tags.length }}</strong><small>活跃标签</small></span></div>
-      <div><Clock3 :size="15" /><span><strong>{{ latestUpdate ? new Date(latestUpdate).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' }) : '—' }}</strong><small>最近更新</small></span></div>
+    <section class="metrics" :aria-label="t('knowledgeStats')">
+      <div><Folder :size="15" /><span><strong>{{ folders.length }}</strong><small>{{ t('folders') }}</small></span></div>
+      <div><FileText :size="15" /><span><strong>{{ documents.length }}</strong><small>{{ t('publishedDocuments') }}</small></span></div>
+      <div><Tags :size="15" /><span><strong>{{ tags.length }}</strong><small>{{ t('activeTags') }}</small></span></div>
+      <div><Clock3 :size="15" /><span><strong>{{ latestUpdate ? new Date(latestUpdate).toLocaleDateString(dateLocale, { month: 'short', day: 'numeric' }) : '—' }}</strong><small>{{ t('latestUpdate') }}</small></span></div>
     </section>
 
     <section>
       <div class="section-heading">
-        <div><span class="eyebrow">LIBRARY</span><h2>知识领域</h2></div>
-        <span class="muted">{{ tree.length }} 个顶级目录</span>
+        <div><span class="eyebrow">LIBRARY</span><h2>{{ t('knowledgeAreas') }}</h2></div>
+        <span class="muted">{{ tree.length }} {{ t('topDirectories') }}</span>
       </div>
       <div class="folder-grid">
         <NuxtLink v-for="node in tree" :key="node.id" :to="folderPublicPath(node.id, folders)" class="folder-card">
           <div class="folder-card-top"><span class="folder-icon"><Folder :size="19" /></span><ArrowRight :size="16" /></div>
           <h3>{{ node.name }}</h3>
-          <p>{{ node.description || '持续整理中的知识目录。' }}</p>
-          <div class="folder-meta"><span>{{ node.children.length }} 子目录</span><span>{{ node.documentCount }} 文档</span></div>
+          <p>{{ node.description || t('organizingFolder') }}</p>
+          <div class="folder-meta"><span>{{ node.children.length }} {{ t('subdirectories') }}</span><span>{{ node.documentCount }} {{ t('documents') }}</span></div>
         </NuxtLink>
       </div>
     </section>
@@ -71,25 +72,25 @@ const openSearch = () =>
     <div class="home-columns">
       <section>
         <div class="section-heading">
-          <div><span class="eyebrow">RECENT</span><h2>最近更新</h2></div>
+          <div><span class="eyebrow">RECENT</span><h2>{{ t('recent') }}</h2></div>
         </div>
         <div class="recent-list surface">
           <NuxtLink v-for="document in recent" :key="document.id" :to="documentPublicPath(document, folders)">
             <span class="doc-icon"><BookOpenText :size="16" /></span>
             <span class="doc-info"><strong>{{ document.title }}</strong><small>{{ document.description }}</small></span>
-            <span class="doc-time">{{ new Date(document.updated_at).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }) }}</span>
+            <span class="doc-time">{{ new Date(document.updated_at).toLocaleDateString(dateLocale, { month: '2-digit', day: '2-digit' }) }}</span>
           </NuxtLink>
         </div>
       </section>
       <section>
         <div class="section-heading">
-          <div><span class="eyebrow">INDEX</span><h2>热门标签</h2></div>
+          <div><span class="eyebrow">INDEX</span><h2>{{ t('popularTags') }}</h2></div>
         </div>
         <div class="tag-panel surface">
           <button v-for="[tag, count] in tags" :key="tag" class="tag" type="button" @click="openSearch">
             # {{ tag }} <span>{{ count }}</span>
           </button>
-          <p>标签来自已发布文档，可通过全局搜索定位相关内容。</p>
+          <p>{{ t('tagHint') }}</p>
         </div>
       </section>
     </div>

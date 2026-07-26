@@ -64,3 +64,29 @@ type SessionMemory = {
 - 并发子任务更新是否覆盖彼此；
 - 用户撤销的偏好是否仍残留；
 - 过期会话是否按策略清理。
+
+<!-- agent-learning-expansion:v2 -->
+## 6. 短期记忆的工程形态：Thread State + Checkpoint
+
+短期记忆通常绑定 `thread_id`，包含消息、当前计划、工具结果、上传文件引用、待审批动作和阶段性产物。每个关键步骤写 checkpoint，恢复时从最后一个一致状态继续。
+
+```mermaid
+sequenceDiagram
+  participant U as User
+  participant R as Runner
+  participant C as Checkpointer
+  U->>R: thread_id + 新消息
+  R->>C: load latest state
+  C-->>R: messages + artifacts + pending actions
+  R->>R: 执行一步并更新状态
+  R->>C: save checkpoint
+  R-->>U: 输出或暂停点
+```
+
+消息历史不是短期记忆的全部。若只保存文本而不保存 tool call ID、未完成事务和 artifact 版本，恢复后容易重复执行动作或丢失任务进度。
+
+## 7. 长会话治理
+
+常用策略包括滑动窗口、按相关性选择、结构化摘要和把旧产物移到外部存储。摘要需要可增量更新，并保留“已确认事实 / 未解决问题 / 已执行副作用 / 证据引用”。对被压缩掉的原始事件保存 trace 指针，以便审计和调试。
+
+参考：[LangGraph Memory 概览](https://docs.langchain.com/oss/python/concepts/memory)。

@@ -9,7 +9,8 @@ import {
 
 describe('Markdown pipeline', () => {
   it('parses supported frontmatter with defaults', () => {
-    const parsed = parseFrontmatter(`---
+    const parsed = parseFrontmatter(
+      `---
 title: Spring Boot 自动配置
 tags:
   - java
@@ -19,7 +20,9 @@ order: 10
 folder: Java 后端/Spring
 ---
 ## 正文
-`, 'fallback.md')
+`,
+      'fallback.md',
+    )
     expect(parsed.title).toBe('Spring Boot 自动配置')
     expect(parsed.slug).toBe('spring-boot-auto-configuration')
     expect(parsed.tags).toEqual(['java', 'spring'])
@@ -52,6 +55,20 @@ $E=mc^2$`)
     expect(html).toContain('checkbox')
     expect(html).toContain('<code>')
     expect(html).toContain('katex')
+  })
+
+  it('keeps sanitized language-group metadata for switchable code examples', () => {
+    const html = renderMarkdown(`\`\`\`python group=agent-loop label=Python
+print("observe")
+\`\`\`
+
+\`\`\`rust group=agent-loop label=Rust
+println!("observe");
+\`\`\``)
+    expect(html).toContain('data-code-group="agent-loop"')
+    expect(html).toContain('data-code-language="python"')
+    expect(html).toContain('data-code-label="Rust"')
+    expect(html).not.toContain('group=agent-loop')
   })
 
   it('creates a table of contents, reading time and excerpt', () => {

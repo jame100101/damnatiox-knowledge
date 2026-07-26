@@ -1,5 +1,6 @@
 <script setup lang="ts">
 const { theme } = useTheme()
+const { locale } = useLocale()
 
 watch(
   theme,
@@ -12,7 +13,7 @@ watch(
 )
 
 useHead(() => ({
-  htmlAttrs: { 'data-theme': theme.value },
+  htmlAttrs: { 'data-theme': theme.value, lang: locale.value },
   meta: [
     {
       name: 'theme-color',

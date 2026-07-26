@@ -93,3 +93,135 @@ ReAct 把 reasoning 与 acting 交错：模型基于当前观察选择动作，�
 - [ReAct: Synergizing Reasoning and Acting in Language Models](https://arxiv.org/abs/2210.03629)
 - [Anthropic Tool Use](https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/overview)
 - [OpenAI Function Calling](https://platform.openai.com/docs/guides/function-calling)
+
+<!-- agent-learning-expansion:v2 -->
+## 8. 用状态转移精确定义循环
+
+“Observe → Think → Act”不是三个互相独立的函数，而是一个带约束的状态转移系统。可以把第 $t$ 轮状态写成：
+
+$$
+S_t = (G, H_t, E_t, B_t, P_t)
+$$
+
+- $G$：稳定的目标与成功标准；
+- $H_t$：对话、工具调用与结果组成的历史；
+- $E_t$：可验证证据，例如文件版本、查询结果、测试报告；
+- $B_t$：剩余步数、时间、token、金额或工具配额；
+- $P_t$：权限、审批和副作用策略。
+
+模型根据 $S_t$ 生成候选动作 $a_t$，运行时先验证再执行，环境返回观察 $o_{t+1}$，随后得到 $S_{t+1}$。真正重要的不是展示模型的思考文本，而是确保**输入状态、动作、观察、预算变化和停止原因都可追踪**。
+
+```mermaid
+stateDiagram-v2
+  [*] --> Observe
+  Observe --> Decide: 构造受控上下文
+  Decide --> Validate: tool call / final output
+  Validate --> Execute: schema、权限、预算通过
+  Validate --> Observe: 返回结构化校验错误
+  Execute --> Observe: tool result + evidence
+  Decide --> Verify: 候选最终答案
+  Verify --> Completed: 成功条件满足
+  Verify --> Observe: 证据不足或需要修正
+  Observe --> Stopped: 超时、取消、最大步数
+```
+
+## 9. 同一最小循环的多语言实现
+
+下面四段代码采用相同语义：模型只负责提出 `final` 或 `tool` 动作，运行时负责预算、执行与结果回填。页面上的语言标签可以直接切换实现。
+
+```python group=agent-loop label=Python
+def run_agent(goal, model, tools, max_steps=8):
+    state = {"goal": goal, "messages": [], "evidence": []}
+    for step in range(max_steps):
+        decision = model.decide(state)
+        if decision.kind == "final":
+            return verify_final(decision.text, state["evidence"])
+
+        result = tools.execute_validated(
+            decision.tool, decision.arguments
+        )
+        state["messages"].append({
+            "tool_call_id": decision.id,
+            "result": result,
+        })
+        state["evidence"].extend(result.evidence)
+    return {"ok": False, "reason": "MAX_STEPS"}
+```
+
+```rust group=agent-loop label=Rust
+fn run_agent(
+    goal: &str,
+    model: &dyn Model,
+    tools: &ToolRegistry,
+    max_steps: usize,
+) -> RunResult {
+    let mut state = State::new(goal);
+    for _ in 0..max_steps {
+        match model.decide(&state)? {
+            Decision::Final(text) => return verify_final(text, &state.evidence),
+            Decision::Tool(call) => {
+                let result = tools.execute_validated(&call)?;
+                state.record_tool_result(call.id, result);
+            }
+        }
+    }
+    RunResult::stopped("MAX_STEPS")
+}
+```
+
+```javascript group=agent-loop label=JavaScript
+async function runAgent(goal, model, tools, maxSteps = 8) {
+  const state = { goal, messages: [], evidence: [] }
+  for (let step = 0; step < maxSteps; step += 1) {
+    const decision = await model.decide(state)
+    if (decision.kind === 'final') {
+      return verifyFinal(decision.text, state.evidence)
+    }
+    const result = await tools.executeValidated(
+      decision.tool,
+      decision.arguments,
+    )
+    state.messages.push({ toolCallId: decision.id, result })
+    state.evidence.push(...result.evidence)
+  }
+  return { ok: false, reason: 'MAX_STEPS' }
+}
+```
+
+```typescript group=agent-loop label=TypeScript
+type Decision =
+  | { kind: 'final'; text: string }
+  | { kind: 'tool'; id: string; tool: string; arguments: unknown }
+
+async function runAgent(
+  goal: string,
+  model: Model,
+  tools: ToolRegistry,
+  maxSteps = 8,
+): Promise<RunResult> {
+  const state = createState(goal)
+  for (let step = 0; step < maxSteps; step += 1) {
+    const decision: Decision = await model.decide(state)
+    if (decision.kind === 'final')
+      return verifyFinal(decision.text, state.evidence)
+
+    const result = await tools.executeValidated(decision.tool, decision.arguments)
+    state.record(decision.id, result)
+  }
+  return { ok: false, reason: 'MAX_STEPS' }
+}
+```
+
+## 10. 循环里的四类停止条件
+
+1. **语义完成**：模型给出最终输出，且确定性验证器确认必需字段、证据和产物齐全。
+2. **协议完成**：模型返回没有 tool call 的最终消息，或调用专门的 `submit_result` 工具。
+3. **资源停止**：最大轮次、deadline、token、金额或并发预算耗尽。
+4. **外部停止**：用户取消、审批拒绝、工具返回不可继续的权限或业务错误。
+
+OpenAI Agents SDK 的 Runner 同样围绕这一循环：最终输出结束；handoff 更新当前 Agent；tool calls 执行并回填；超过最大轮次则以明确错误退出。工程实现应额外记录 `stop_reason`，否则“正常完成”和“被预算截断”会在上层看起来一样。
+
+### 延伸阅读
+
+- [OpenAI Agents SDK：Running agents](https://openai.github.io/openai-agents-python/running_agents/)
+- [AI Agent 开发教程：一次模型请求中的上下文组成](https://bojieli.github.io/ai-agent-book/book/chapter1/)

@@ -103,16 +103,6 @@ const md: MarkdownIt = new MarkdownIt({
   html: true,
   linkify: true,
   typographer: true,
-  highlight(code, language) {
-    if (language === 'mermaid') {
-      return `<div class="mermaid">${escapeHtml(code)}</div>`
-    }
-    const highlighted =
-      language && hljs.getLanguage(language)
-        ? hljs.highlight(code, { language }).value
-        : hljs.highlightAuto(code).value
-    return `<pre class="code-block"><div class="code-toolbar"><span>${escapeHtml(language || 'text')}</span><button type="button" class="copy-code" aria-label="复制代码">复制</button></div><code class="hljs">${highlighted}</code></pre>`
-  },
 })
   .use(anchor, {
     slugify: (value: string) => slugify(value) || `section-${Date.now()}`,
@@ -123,6 +113,53 @@ const md: MarkdownIt = new MarkdownIt({
     delimiters: 'dollars',
     katexOptions: { trust: false, strict: 'ignore', throwOnError: false },
   })
+
+const languageLabels: Record<string, string> = {
+  js: 'JavaScript',
+  javascript: 'JavaScript',
+  ts: 'TypeScript',
+  typescript: 'TypeScript',
+  py: 'Python',
+  python: 'Python',
+  rs: 'Rust',
+  rust: 'Rust',
+  sh: 'Shell',
+  bash: 'Shell',
+  text: 'Text',
+}
+
+md.renderer.rules.fence = (tokens: any[], idx: number) => {
+  const token = tokens[idx]
+  const parts = String(token?.info || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+  const language = (parts.shift() || 'text').toLowerCase()
+  const metadata = Object.fromEntries(
+    parts
+      .map((part) => /^([a-z][\w-]*)=(.+)$/i.exec(part))
+      .filter(Boolean)
+      .map((match) => [
+        match![1]!.toLowerCase(),
+        match![2]!.replace(/^["']|["']$/g, ''),
+      ]),
+  )
+
+  if (language === 'mermaid') {
+    return `<div class="mermaid">${escapeHtml(token?.content || '')}</div>\n`
+  }
+
+  const highlighted = hljs.getLanguage(language)
+    ? hljs.highlight(token?.content || '', { language }).value
+    : hljs.highlightAuto(token?.content || '').value
+  const group = metadata.group ? escapeHtml(metadata.group) : ''
+  const label = escapeHtml(metadata.label || languageLabels[language] || language)
+  const groupAttributes = group
+    ? ` data-code-group="${group}" data-code-language="${escapeHtml(language)}" data-code-label="${label}"`
+    : ''
+
+  return `<pre class="code-block"${groupAttributes}><div class="code-toolbar"><span>${label}</span><button type="button" class="copy-code" aria-label="复制代码">复制</button></div><code class="hljs">${highlighted}</code></pre>\n`
+}
 
 md.renderer.rules.link_open = (
   tokens: any[],
@@ -205,6 +242,16 @@ export function renderMarkdown(source: string): string {
       img: ['src', 'alt', 'title', 'width', 'height', 'loading'],
       input: ['type', 'checked', 'disabled'],
       button: ['type', 'class', 'aria-label'],
+      pre: [
+        'class',
+        'id',
+        'role',
+        'data-code-group',
+        'data-code-language',
+        'data-code-label',
+        'aria-labelledby',
+        'hidden',
+      ],
       annotation: ['encoding'],
     },
     allowedSchemes: ['http', 'https', 'mailto', 'tel'],

@@ -81,3 +81,32 @@ type MemoryRecord = {
 - [Generative Agents](https://arxiv.org/abs/2304.03442)
 - [Mem0](https://github.com/mem0ai/mem0)
 - [Letta](https://github.com/letta-ai/letta)
+
+<!-- agent-learning-expansion:v2 -->
+## 6. 长期记忆的三种语义
+
+| 类型 | 保存内容 | 示例 | 主要风险 |
+| --- | --- | --- | --- |
+| Semantic | 稳定事实与偏好 | 用户偏好简洁回答、项目使用 TypeScript | 事实过期、主体混淆 |
+| Episodic | 过去经历与结果 | 某次部署失败原因及修复结果 | 过度类比、噪声累积 |
+| Procedural | 做事规则与经验 | 发布前必须运行哪些验证 | 与当前策略冲突、版本陈旧 |
+
+长期记忆应有 namespace、主体、来源、时间、置信度、版本和过期策略。仅存一段无来源自然语言，会使后续系统难以判断该事实属于谁、是否仍有效。
+
+## 7. 写入与读取是两套决策
+
+```mermaid
+flowchart LR
+  E[会话事件] --> W{值得长期保存}
+  W -->|否| X[仅留 Trace]
+  W -->|是| N[规范化 + 去重 + 来源]
+  N --> S[Store]
+  Q[新任务] --> R[按主体、类型、相关性检索]
+  S --> R
+  R --> V[时效与冲突校验]
+  V --> C[装配进 Context]
+```
+
+写入可在响应热路径完成，也可由后台任务整理。热路径及时但增加延迟；后台整理能合并冲突和去重，但存在最终一致性。读取时不能只做向量相似度，还要过滤主体、权限、时间和任务范围。
+
+参考：[LangGraph 长期记忆文档](https://docs.langchain.com/oss/python/langchain/long-term-memory)。

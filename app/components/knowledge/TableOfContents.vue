@@ -3,6 +3,7 @@ import { ListTree } from 'lucide-vue-next'
 import { extractHeadings } from '~/utils/markdown'
 
 const props = defineProps<{ source: string }>()
+const { t } = useLocale()
 const headings = computed(() => extractHeadings(props.source))
 const activeId = ref('')
 let observer: IntersectionObserver | undefined
@@ -25,7 +26,7 @@ onUnmounted(() => observer?.disconnect())
 
 <template>
   <aside class="toc">
-    <div class="toc-title"><ListTree :size="14" /> 本页目录</div>
+    <div class="toc-title"><ListTree :size="14" /> {{ t('pageToc') }}</div>
     <nav v-if="headings.length">
       <a
         v-for="heading in headings"
@@ -36,12 +37,12 @@ onUnmounted(() => observer?.disconnect())
         {{ heading.title }}
       </a>
     </nav>
-    <p v-else class="subtle">本文暂无二、三级标题。</p>
+    <p v-else class="subtle">{{ t('noHeadings') }}</p>
   </aside>
 </template>
 
 <style scoped>
-.toc { position: sticky; top: 24px; }
+.toc { min-width: 0; }
 .toc-title { display: flex; align-items: center; gap: 7px; margin-bottom: 13px; color: var(--kb-text-muted); font-size: 12px; font-weight: 700; }
 .toc-title svg { color: var(--kb-icon); }
 nav { display: grid; gap: 2px; border-left: 1px solid var(--kb-border); }

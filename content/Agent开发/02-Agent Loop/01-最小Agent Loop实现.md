@@ -98,3 +98,62 @@ async function runAgent(goal: string, tools: Tool[], options: Options) {
 - [OpenAI Function Calling](https://platform.openai.com/docs/guides/function-calling)
 - [Claude Tool Use](https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/overview)
 - [Gemini Function Calling](https://ai.google.dev/gemini-api/docs/function-calling)
+
+<!-- agent-learning-expansion:v2 -->
+## 6. 一轮运行的协议边界
+
+一轮并不是“调用一次模型”这么简单，而是以下协议的组合：
+
+```mermaid
+sequenceDiagram
+  participant R as Runner
+  participant M as Model
+  participant V as Validator
+  participant T as Tool
+  R->>M: messages + tools + budgets
+  M-->>R: final 或 tool_calls
+  R->>V: 校验名称、参数、权限、预算
+  alt 校验通过
+    V->>T: 执行 call_id
+    T-->>R: ToolResult + Evidence
+  else 校验失败
+    V-->>R: StructuredError
+  end
+  R->>M: 追加与 call_id 对应的 observation
+```
+
+运行时必须保持三个不变量：
+
+1. **协议不变量**：每个调用都有唯一 ID，每个结果引用原调用；未知工具和非法参数不会进入 handler。
+2. **状态不变量**：模型看到的历史与 Runner 持久化的状态一致；恢复运行不会重复提交已成功的副作用。
+3. **资源不变量**：每轮都先检查 deadline、取消信号与预算，模型也不能延长运行时强制上限。
+
+## 7. 决策、执行和验证要使用不同类型
+
+```ts
+type ToolDecision = {
+  kind: 'tool'
+  callId: string
+  name: string
+  arguments: unknown
+}
+
+type ToolResult =
+  | { ok: true; callId: string; data: unknown; evidence: EvidenceItem[] }
+  | { ok: false; callId: string; error: ToolError }
+
+type FinalResult = {
+  ok: boolean
+  answer?: string
+  stopReason: 'COMPLETED' | 'MAX_STEPS' | 'TIMEOUT' | 'CANCELLED' | 'ERROR'
+  evidence: EvidenceItem[]
+}
+```
+
+不要把三者压成一个任意 JSON。`ToolDecision` 是模型建议；`ToolResult` 是运行时事实；`FinalResult` 是经过完成度验证后的外部契约。类型分开后，日志、重放、统计和错误处理都会更清晰。
+
+## 8. 从最小实现到生产 Runner
+
+生产 Runner 还需增加：并行调用并发上限、幂等键、checkpoint、流式事件、审批暂停与恢复、上下文压缩、trace/span、模型与工具重试的独立策略，以及最终产物的语义验证。每增加一个机制，都应配一个确定性测试用例，而不是只靠对话试跑。
+
+参考：[OpenAI Agents SDK 的 Agent loop](https://openai.github.io/openai-agents-python/running_agents/)。

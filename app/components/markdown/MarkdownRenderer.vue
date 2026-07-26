@@ -8,9 +8,10 @@ const root = ref<HTMLElement>()
 const viewerDialog = ref<HTMLElement>()
 const rendered = computed(() => renderMarkdown(props.source))
 const { theme } = useTheme()
+const { locale, t } = useLocale()
 const viewerOpen = ref(false)
 const viewerSvg = ref('')
-const viewerTitle = ref('流程图')
+const viewerTitle = ref<string>(t('diagram'))
 const zoom = ref(1)
 const panX = ref(0)
 const panY = ref(0)
@@ -19,6 +20,7 @@ const zoomPercent = computed(() => `${Math.round(zoom.value * 100)}%`)
 let previousBodyOverflow = ''
 let dragStartX = 0
 let dragStartY = 0
+let codeGroupSequence = 0
 
 function cssVariable(name: string, fallback: string) {
   return (
@@ -71,18 +73,20 @@ function prepareDiagram(node: HTMLElement, index: number) {
   if (!svg) return
 
   node.classList.add('mermaid-interactive')
-  const label = `放大查看流程图 ${index + 1}`
+  const label = `${t('enlarge')} ${t('diagram')} ${index + 1}`
   let button = node.querySelector<HTMLButtonElement>('.mermaid-open-button')
   if (!button) {
     button = document.createElement('button')
     button.type = 'button'
     button.className = 'mermaid-open-button'
     button.innerHTML =
-      '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="m21 3-7 7"/><path d="m3 21 7-7"/><path d="M9 21H3v-6"/></svg><span>放大查看</span>'
+      '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="m21 3-7 7"/><path d="m3 21 7-7"/><path d="M9 21H3v-6"/></svg><span></span>'
     node.append(button)
   }
+  const buttonLabel = button.querySelector('span')
+  if (buttonLabel) buttonLabel.textContent = t('enlarge')
   button.setAttribute('aria-label', label)
-  button.title = `${label}（也可直接点击图表）`
+  button.title = `${label} · ${t('diagramOpenHint')}`
 
   const viewBox = svg.viewBox?.baseVal
   if (viewBox?.width && viewBox?.height && viewBox.width / viewBox.height >= 3) {
@@ -93,15 +97,93 @@ function prepareDiagram(node: HTMLElement, index: number) {
   }
 }
 
+function enhanceCodeGroups() {
+  if (!root.value) return
+  const groups = new Map<string, HTMLPreElement[]>()
+  root.value
+    .querySelectorAll<HTMLPreElement>('pre.code-block[data-code-group]')
+    .forEach((block) => {
+      if (block.closest('.code-group')) return
+      const group = block.dataset.codeGroup
+      if (!group) return
+      groups.set(group, [...(groups.get(group) || []), block])
+    })
+
+  groups.forEach((blocks, group) => {
+    if (blocks.length < 2) return
+    const section = document.createElement('section')
+    const tabs = document.createElement('div')
+    const panels = document.createElement('div')
+    const instance = ++codeGroupSequence
+    section.className = 'code-group'
+    section.dataset.codeGroup = group
+    tabs.className = 'code-tabs'
+    tabs.setAttribute('role', 'tablist')
+    tabs.setAttribute('aria-label', t('codeLanguages'))
+    panels.className = 'code-panels'
+    blocks[0]!.before(section)
+    section.append(tabs, panels)
+
+    const activate = (activeIndex: number) => {
+      blocks.forEach((block, index) => {
+        const tab = tabs.children[index] as HTMLButtonElement
+        const active = index === activeIndex
+        block.hidden = !active
+        block.setAttribute('aria-hidden', String(!active))
+        tab.setAttribute('aria-selected', String(active))
+        tab.tabIndex = active ? 0 : -1
+      })
+    }
+
+    blocks.forEach((block, index) => {
+      const tab = document.createElement('button')
+      const label =
+        block.dataset.codeLabel || block.dataset.codeLanguage || `Code ${index + 1}`
+      const tabId = `code-tab-${instance}-${index}`
+      const panelId = `code-panel-${instance}-${index}`
+      tab.type = 'button'
+      tab.className = 'code-tab'
+      tab.id = tabId
+      tab.textContent = label
+      tab.setAttribute('role', 'tab')
+      tab.setAttribute('aria-controls', panelId)
+      tab.onclick = () => activate(index)
+      tab.onkeydown = (event) => {
+        const keys = ['ArrowLeft', 'ArrowRight', 'Home', 'End']
+        if (!keys.includes(event.key)) return
+        event.preventDefault()
+        const nextIndex =
+          event.key === 'Home'
+            ? 0
+            : event.key === 'End'
+              ? blocks.length - 1
+              : (index + (event.key === 'ArrowRight' ? 1 : -1) + blocks.length) %
+                blocks.length
+        activate(nextIndex)
+        ;(tabs.children[nextIndex] as HTMLButtonElement).focus()
+      }
+      block.id = panelId
+      block.setAttribute('role', 'tabpanel')
+      block.setAttribute('aria-labelledby', tabId)
+      tabs.append(tab)
+      panels.append(block)
+    })
+    activate(0)
+  })
+}
+
 async function enhance() {
   await nextTick()
   if (!root.value) return
+  enhanceCodeGroups()
   root.value.querySelectorAll<HTMLButtonElement>('.copy-code').forEach((button) => {
+    button.textContent = t('copy')
+    button.setAttribute('aria-label', t('copy'))
     button.onclick = async () => {
       const code = button.closest('pre')?.querySelector('code')?.textContent || ''
       await navigator.clipboard.writeText(code)
-      button.textContent = '已复制'
-      setTimeout(() => (button.textContent = '复制'), 1200)
+      button.textContent = t('copied')
+      setTimeout(() => (button.textContent = t('copy')), 1200)
     }
   })
   const nodes = root.value.querySelectorAll<HTMLElement>('.mermaid')
@@ -146,7 +228,7 @@ function openDiagram(node: HTMLElement) {
     ? [...root.value.querySelectorAll('.mermaid-interactive')]
     : []
   const index = Math.max(0, diagrams.indexOf(node))
-  viewerTitle.value = `流程图 ${index + 1}`
+  viewerTitle.value = `${t('diagram')} ${index + 1}`
   viewerSvg.value = cloneSvgForViewer(svg)
   zoom.value = 1
   panX.value = 0
@@ -225,7 +307,7 @@ onBeforeUnmount(() => {
   if (viewerOpen.value) document.body.style.overflow = previousBodyOverflow
 })
 watch(rendered, enhance)
-watch(theme, async () => {
+watch([theme, locale], async () => {
   closeViewer()
   if (root.value) root.value.innerHTML = rendered.value
   await enhance()
@@ -249,20 +331,20 @@ watch(theme, async () => {
         class="diagram-viewer-overlay"
         role="dialog"
         aria-modal="true"
-        :aria-label="`${viewerTitle}放大视图`"
+        :aria-label="`${viewerTitle} ${t('enlarge')}`"
         tabindex="-1"
         @pointerdown.self="closeViewer"
       >
         <div class="diagram-viewer-shell">
           <header class="diagram-viewer-header">
             <div>
-              <span>DIAGRAM VIEWER</span>
+              <span>{{ t('diagramViewer').toUpperCase() }}</span>
               <strong>{{ viewerTitle }}</strong>
             </div>
             <button
               type="button"
-              aria-label="关闭流程图"
-              title="关闭（Esc）"
+              :aria-label="t('closeDiagram')"
+              :title="`${t('close')}（Esc）`"
               @click="closeViewer"
             >
               <X :size="19" />
@@ -289,12 +371,12 @@ watch(theme, async () => {
           </div>
 
           <footer class="diagram-viewer-footer">
-            <span>滚轮缩放 · 拖拽移动 · 双击复位</span>
+            <span>{{ t('diagramHelp') }}</span>
             <div class="diagram-viewer-controls">
               <button
                 type="button"
-                aria-label="缩小流程图"
-                title="缩小（-）"
+                :aria-label="t('zoomOut')"
+                :title="`${t('zoomOut')}（-）`"
                 @click="setZoom(zoom - 0.25)"
               >
                 <ZoomOut :size="18" />
@@ -302,16 +384,16 @@ watch(theme, async () => {
               <output aria-live="polite">{{ zoomPercent }}</output>
               <button
                 type="button"
-                aria-label="放大流程图"
-                title="放大（+）"
+                :aria-label="t('zoomIn')"
+                :title="`${t('zoomIn')}（+）`"
                 @click="setZoom(zoom + 0.25)"
               >
                 <ZoomIn :size="18" />
               </button>
               <button
                 type="button"
-                aria-label="复位流程图"
-                title="复位（0）"
+                :aria-label="t('resetDiagram')"
+                :title="`${t('resetDiagram')}（0）`"
                 @click="resetView"
               >
                 <RotateCcw :size="17" />
@@ -417,6 +499,68 @@ watch(theme, async () => {
   color: var(--kb-text-muted);
   cursor: pointer;
   font-size: 11px;
+}
+.markdown-body .code-group {
+  margin: 1.5em 0;
+  overflow: hidden;
+  border: 1px solid var(--kb-border);
+  border-radius: var(--kb-radius-md);
+  background: var(--kb-code-bg);
+}
+.markdown-body .code-tabs {
+  min-height: 42px;
+  display: flex;
+  align-items: end;
+  gap: 3px;
+  padding: 6px 8px 0;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--kb-border);
+  background: var(--kb-panel-bg);
+}
+.markdown-body .code-tab {
+  position: relative;
+  min-height: 35px;
+  flex: none;
+  padding: 7px 11px 9px;
+  border: 0;
+  border-radius: 6px 6px 0 0;
+  background: transparent;
+  color: var(--kb-text-subtle);
+  font:
+    600 11px/1 'SFMono-Regular',
+    Consolas,
+    monospace;
+  cursor: pointer;
+}
+.markdown-body .code-tab:hover {
+  color: var(--kb-text);
+  background: var(--kb-surface-hover);
+}
+.markdown-body .code-tab[aria-selected='true'] {
+  color: var(--kb-code-text);
+  background: var(--kb-code-bg);
+}
+.markdown-body .code-tab[aria-selected='true']::after {
+  content: '';
+  position: absolute;
+  right: 10px;
+  bottom: -1px;
+  left: 10px;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--kb-accent);
+}
+.markdown-body .code-panels pre.code-block {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+}
+.markdown-body .code-panels .code-toolbar > span {
+  visibility: hidden;
+}
+.markdown-body .code-panels .copy-code {
+  color: var(--kb-code-text);
+  opacity: 0.72;
 }
 .markdown-body table {
   width: 100%;

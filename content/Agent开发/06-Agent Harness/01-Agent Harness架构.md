@@ -78,3 +78,41 @@ Finalizer 负责：
 ## 8. 研究 Harness 的方法
 
 不要只看 README。沿一次完整任务追踪入口、session、loop、tool registry、permission、executor、trace、compaction、finalizer，并记录每个模块的输入输出契约。
+
+<!-- agent-learning-expansion:v2 -->
+## 6. 模型、Agent 与 Harness 的边界
+
+模型负责基于当前上下文提出决策；Agent 是围绕目标持续运行的逻辑实体；Harness 是让这段逻辑可靠运行的确定性基础设施。
+
+```mermaid
+flowchart TB
+  UI[User / API] --> RUN[Runner]
+  subgraph Harness
+    RUN --> CB[Context Builder]
+    RUN --> TR[Tool Registry]
+    RUN --> POL[Policy + Approval]
+    RUN --> ST[State + Checkpoint]
+    RUN --> OBS[Trace + Metrics]
+    RUN --> VAL[Output Validator]
+  end
+  CB --> LLM[Model]
+  LLM --> RUN
+  TR --> ENV[Files / APIs / Browser]
+  ENV --> RUN
+```
+
+Harness 负责模型不擅长保证的事情：严格顺序、schema、权限、幂等、并发、预算、恢复、取消和审计。Prompt 能描述规则，但真正的强制边界必须在模型之外。
+
+## 7. Harness 的最小模块
+
+1. **Runner**：循环、事件分发、停止条件；
+2. **Context Builder**：选择并压缩输入；
+3. **Tool Registry/Executor**：定义、校验、执行和标准化结果；
+4. **Policy Engine**：权限、审批、风险和配额；
+5. **State Store**：会话、checkpoint、artifact；
+6. **Observability**：trace、span、成本、错误与重放；
+7. **Validator**：结构、语义和外部成功条件。
+
+教程把一次模型请求理解为系统指令、项目约束、工具、历史和当前输入的组合，这正是 Context Builder 要解决的问题；Agent 的实际效果因此是“模型 + Harness”的联合结果。
+
+参考：[AI Agent 开发教程](https://bojieli.github.io/ai-agent-book/book/chapter1/)。

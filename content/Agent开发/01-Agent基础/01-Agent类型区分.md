@@ -80,3 +80,64 @@ Multi-Agent 把任务分给多个具有独立上下文或职责的 Agent，例�
 - [Anthropic：Building effective agents](https://www.anthropic.com/research/building-effective-agents)
 - [OpenAI：A practical guide to building agents](https://openai.com/business/guides-and-resources/a-practical-guide-to-building-ai-agents/)
 - [Datawhale Agent Learning Hub](https://github.com/datawhalechina/Agent-Learning-Hub)
+
+<!-- agent-learning-expansion:v2 -->
+## 6. 从“控制权”而不是界面判断系统类型
+
+判断一个系统属于 Chatbot、Workflow 还是 Agent，最有效的问题是：**谁在运行时决定下一条边？**
+
+```mermaid
+flowchart TD
+  U[用户目标] --> C{下一步由谁决定}
+  C -->|单次提示与回复| B[Chatbot]
+  C -->|代码预先定义路径| W[Workflow]
+  C -->|模型依据观察动态选择| A[Agent]
+  A --> M{是否需要独立上下文或职责}
+  M -->|否| S[Single Agent]
+  M -->|是| MA[Multi-Agent]
+```
+
+这里有四个容易混淆的维度：
+
+| 维度 | 含义 | 诊断问题 |
+| --- | --- | --- |
+| 控制权 | 谁选择下一步动作 | 分支是代码里的 `if`，还是模型返回的 tool call？ |
+| 自主度 | 系统能连续执行多少步 | 每一步都要用户确认，还是只在检查点停下？ |
+| 环境闭环 | 动作结果是否回到下一轮决策 | 工具执行结果是否成为新的 observation？ |
+| 状态边界 | 状态属于会话、任务还是多个角色 | 是否能恢复、重放并解释当前状态？ |
+
+因此，“带聊天框”不代表 Chatbot，“调用工具”也不自动代表 Agent。固定的“分类 → 搜索 → 总结”仍是 Workflow；只有模型能根据搜索结果决定继续搜索、换查询、使用别的工具或结束，才具有 Agent 式控制。
+
+## 7. Workflow 与 Agent 的组合方式
+
+生产系统通常不是四选一，而是**确定性外壳包住有限自主循环**：
+
+```mermaid
+flowchart LR
+  I[输入校验] --> R[确定性路由]
+  R --> L[受预算约束的 Agent Loop]
+  L --> V[确定性结果验证]
+  V -->|通过| O[提交结果]
+  V -->|可修复| L
+  V -->|高影响动作| H[人工检查点]
+```
+
+这种设计把适合代码解决的问题留给代码：身份鉴别、schema 校验、权限、预算、事务和最终验证；把难以枚举的语义决策留给模型：拆解开放任务、选择检索方向、解释不完整证据和重新规划。
+
+## 8. 工程选择矩阵
+
+| 任务特征 | 优先结构 | 原因 |
+| --- | --- | --- |
+| 路径稳定、规则完整、错误代价高 | Workflow | 可穷举、可单元测试、可审计 |
+| 只需语言理解或生成 | Chatbot / 单次 LLM | 额外循环只增加成本与延迟 |
+| 步骤数量未知，必须根据环境反馈调整 | Agent | 需要运行时规划与工具选择 |
+| 可拆成互不依赖的检索分支 | Workflow 并行或 orchestrator-workers | 是否使用多 Agent 取决于上下文隔离需求 |
+| 需要独立复核且不能共享先前结论 | Multi-Agent | 隔离上下文可减少锚定效应 |
+
+Anthropic 将 workflow 描述为由预定义代码路径编排的系统，将 agent 描述为由模型动态控制过程与工具使用的系统；OpenAI 的工程指南则把模型、工具和指令视为 Agent 的三个基础部件。两者共同指向一个实践原则：先建立最简单的可评测基线，再逐步增加自主度。
+
+### 延伸阅读
+
+- [AI Agent 开发教程：Agent、上下文、工具与 Harness](https://bojieli.github.io/ai-agent-book/book/chapter1/)
+- [Anthropic：Building effective agents](https://www.anthropic.com/engineering/building-effective-agents)
+- [OpenAI：A practical guide to building agents](https://openai.com/business/guides-and-resources/a-practical-guide-to-building-ai-agents/)

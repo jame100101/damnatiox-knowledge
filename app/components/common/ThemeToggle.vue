@@ -4,8 +4,11 @@ import { Moon, Sun } from 'lucide-vue-next'
 withDefaults(defineProps<{ showLabel?: boolean }>(), { showLabel: false })
 
 const { isDark, toggleTheme } = useTheme()
+const { t } = useLocale()
 const ready = ref(false)
-const actionLabel = computed(() => (isDark.value ? '切换到浅色模式' : '切换到深色模式'))
+const actionLabel = computed(() =>
+  isDark.value ? t('switchToLight') : t('switchToDark'),
+)
 
 onMounted(() => {
   ready.value = true
@@ -24,7 +27,7 @@ onMounted(() => {
   >
     <Sun v-if="isDark" :size="16" />
     <Moon v-else :size="16" />
-    <span v-if="showLabel">{{ isDark ? '浅色模式' : '深色模式' }}</span>
+    <span v-if="showLabel">{{ isDark ? t('lightMode') : t('darkMode') }}</span>
   </button>
 </template>
 
