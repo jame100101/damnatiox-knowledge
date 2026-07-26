@@ -80,7 +80,7 @@ Finalizer 负责：
 不要只看 README。沿一次完整任务追踪入口、session、loop、tool registry、permission、executor、trace、compaction、finalizer，并记录每个模块的输入输出契约。
 
 <!-- agent-learning-expansion:v2 -->
-## 6. 模型、Agent 与 Harness 的边界
+## 9. 模型、Agent 与 Harness 的边界
 
 模型负责基于当前上下文提出决策；Agent 是围绕目标持续运行的逻辑实体；Harness 是让这段逻辑可靠运行的确定性基础设施。
 
@@ -103,7 +103,7 @@ flowchart TB
 
 Harness 负责模型不擅长保证的事情：严格顺序、schema、权限、幂等、并发、预算、恢复、取消和审计。Prompt 能描述规则，但真正的强制边界必须在模型之外。
 
-## 7. Harness 的最小模块
+## 10. Harness 的最小模块
 
 1. **Runner**：循环、事件分发、停止条件；
 2. **Context Builder**：选择并压缩输入；

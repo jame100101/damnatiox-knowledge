@@ -83,6 +83,11 @@ describe('MarkdownRenderer', () => {
     ).querySelector<HTMLButtonElement>('.mermaid-open-button')
     expect(openButton?.textContent).toBe('放大查看')
     expect(openButton?.getAttribute('aria-label')).toBe('放大查看 流程图 1')
+    expect(openButton).toBeTruthy()
+
+    const openButtonIcon = openButton!.querySelector<SVGSVGElement>('svg')
+    expect(openButtonIcon).toBeTruthy()
+    expect(openButtonIcon?.getAttribute('width')).toBeNull()
 
     openButton?.click()
     await nextTick()

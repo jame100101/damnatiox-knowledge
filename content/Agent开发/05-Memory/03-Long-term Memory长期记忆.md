@@ -83,7 +83,7 @@ type MemoryRecord = {
 - [Letta](https://github.com/letta-ai/letta)
 
 <!-- agent-learning-expansion:v2 -->
-## 6. 长期记忆的三种语义
+## 7. 长期记忆的三种语义
 
 | 类型 | 保存内容 | 示例 | 主要风险 |
 | --- | --- | --- | --- |
@@ -93,7 +93,7 @@ type MemoryRecord = {
 
 长期记忆应有 namespace、主体、来源、时间、置信度、版本和过期策略。仅存一段无来源自然语言，会使后续系统难以判断该事实属于谁、是否仍有效。
 
-## 7. 写入与读取是两套决策
+## 8. 写入与读取是两套决策
 
 ```mermaid
 flowchart LR

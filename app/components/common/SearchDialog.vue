@@ -214,9 +214,10 @@ footer {
   font-size: 10px;
 }
 kbd {
-  border: 1px solid var(--kb-border);
+  border: 1px solid var(--kb-icon-tile-border);
   border-radius: 3px;
-  background: var(--kb-code-bg);
+  background: var(--kb-shortcut-bg);
+  color: var(--kb-shortcut-text);
   padding: 1px 4px;
 }
 </style>

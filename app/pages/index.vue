@@ -11,7 +11,7 @@ import {
 import { buildFolderTree, documentPublicPath, folderPublicPath } from '~/utils/folders'
 
 const { t, dateLocale } = useLocale()
-useHead(() => ({ title: t('homeTitle') }))
+useHead({ title: 'Knowledge Base', titleTemplate: null })
 const { folders, documents, load } = useKnowledge()
 await callOnce('home-knowledge', () => load())
 const tree = computed(() => buildFolderTree(folders.value, documents.value))

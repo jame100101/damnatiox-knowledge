@@ -51,6 +51,103 @@ test('theme toggle switches to light mode and persists the preference', async ({
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
 })
 
+test('branding and light theme controls keep their intended visual tokens', async ({
+  page,
+  request,
+}) => {
+  await page.goto('/')
+  await expect(page).toHaveTitle('Knowledge Base')
+  await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', '/favicon.svg')
+
+  const favicon = await request.get('/favicon.svg')
+  expect(favicon.ok()).toBe(true)
+  expect(favicon.headers()['content-type']).toContain('image/svg+xml')
+  expect(await favicon.text()).toContain('<svg')
+
+  await page.getByRole('button', { name: '切换到浅色模式' }).click()
+  await page.goto('/knowledge/java-backend')
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
+
+  const lightTokens = await page.evaluate(() => {
+    const probe = document.createElement('span')
+    document.body.append(probe)
+    const resolveColor = (variable: string) => {
+      probe.style.color = `var(${variable})`
+      return getComputedStyle(probe).color
+    }
+    const tokens = {
+      codeBackground: resolveColor('--kb-code-bg'),
+      iconBackground: resolveColor('--kb-icon-tile-bg'),
+      iconBorder: resolveColor('--kb-icon-tile-border'),
+      shortcutBackground: resolveColor('--kb-shortcut-bg'),
+      shortcutText: resolveColor('--kb-shortcut-text'),
+    }
+    probe.remove()
+    return tokens
+  })
+  const miniFolderStyle = await page
+    .locator('.mini-folder')
+    .first()
+    .evaluate((element) => {
+      const style = getComputedStyle(element)
+      return {
+        background: style.backgroundColor,
+        border: style.borderColor,
+      }
+    })
+  expect(miniFolderStyle.background).toBe(lightTokens.iconBackground)
+  expect(miniFolderStyle.background).not.toBe(lightTokens.codeBackground)
+  expect(miniFolderStyle.border).toBe(lightTokens.iconBorder)
+
+  await page.keyboard.press('Control+K')
+  const shortcutStyle = await page
+    .getByRole('dialog', { name: '搜索知识库' })
+    .locator('footer kbd')
+    .first()
+    .evaluate((element) => {
+      const style = getComputedStyle(element)
+      return {
+        background: style.backgroundColor,
+        color: style.color,
+      }
+    })
+  expect(shortcutStyle.background).toBe(lightTokens.shortcutBackground)
+  expect(shortcutStyle.background).not.toBe(lightTokens.codeBackground)
+  expect(shortcutStyle.color).toBe(lightTokens.shortcutText)
+})
+
+test('Mermaid enlarge control stays compact without inheriting diagram SVG width', async ({
+  page,
+}) => {
+  await page.goto('/knowledge/java-backend/spring/spring-boot/spring-boot-introduction')
+  const openButton = page.locator('.mermaid-open-button')
+  await expect(openButton).toBeVisible()
+
+  const metrics = await openButton.evaluate((element) => {
+    const buttonStyle = getComputedStyle(element)
+    const icon = element.querySelector('svg')
+    const iconStyle = icon ? getComputedStyle(icon) : null
+    const bounds = element.getBoundingClientRect()
+    return {
+      height: bounds.height,
+      width: bounds.width,
+      lineHeight: buttonStyle.lineHeight,
+      overflowWrap: buttonStyle.overflowWrap,
+      whiteSpace: buttonStyle.whiteSpace,
+      iconMinWidth: iconStyle?.minWidth,
+      iconWidth: iconStyle?.width,
+    }
+  })
+
+  expect(metrics.height).toBeLessThanOrEqual(32)
+  expect(metrics.width).toBeLessThan(100)
+  expect(metrics.lineHeight).toBe('11px')
+  expect(metrics.overflowWrap).toBe('normal')
+  expect(metrics.whiteSpace).toBe('nowrap')
+  expect(metrics.iconMinWidth).toBe('13px')
+  expect(metrics.iconWidth).toBe('13px')
+})
+
 test('language selector switches public UI between all supported locales', async ({
   page,
 }) => {
@@ -75,10 +172,7 @@ test('folder labels collapse the current folder and the TOC remains sticky', asy
   await page.waitForLoadState('networkidle')
   await page.locator('.tree-label').filter({ hasText: 'Spring' }).click()
   await page.locator('.tree-label').filter({ hasText: 'Spring Boot' }).click()
-  await page
-    .locator('.tree-document')
-    .filter({ hasText: 'Spring Boot 简介' })
-    .click()
+  await page.locator('.tree-document').filter({ hasText: 'Spring Boot 简介' }).click()
   await expect(page).toHaveURL(
     /\/knowledge\/java-backend\/spring\/spring-boot\/spring-boot-introduction$/,
   )

@@ -615,24 +615,29 @@ watch([theme, locale], async () => {
   top: 10px;
   right: 10px;
   width: max-content;
-  min-height: 30px;
+  min-height: 26px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   margin: 0;
-  padding: 5px 9px;
+  padding: 3px 7px;
   border: 1px solid var(--kb-control-border);
   border-radius: var(--kb-radius-sm);
   background: var(--kb-panel-bg);
   box-shadow: 0 2px 8px rgb(0 0 0 / 12%);
   color: var(--kb-text);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 650;
+  line-height: 1;
+  white-space: nowrap;
+  overflow-wrap: normal;
   cursor: zoom-in;
 }
 .markdown-body .mermaid-open-button svg {
   width: 13px;
   height: 13px;
+  min-width: 13px;
+  flex: 0 0 13px;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.8;

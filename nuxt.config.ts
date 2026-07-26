@@ -17,11 +17,19 @@ export default defineNuxtConfig({
   },
   app: {
     head: {
-      titleTemplate: '%s · Damnatiox Knowledge',
+      title: 'Knowledge Base',
+      titleTemplate: '%s · Knowledge Base',
+      link: [
+        {
+          rel: 'icon',
+          type: 'image/svg+xml',
+          href: '/favicon.svg',
+        },
+      ],
       meta: [
         {
           name: 'description',
-          content: 'Damnatiox 的个人 Markdown 知识工作台',
+          content: '个人 Markdown Knowledge Base',
         },
       ],
     },

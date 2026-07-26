@@ -197,7 +197,7 @@ useHead(() => ({
 .child-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px; }
 .child-grid a { min-width: 0; min-height: 76px; display: grid; grid-template-columns: 34px 1fr 20px; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--kb-border); border-radius: var(--kb-radius-md); background: var(--kb-surface); color: var(--kb-text-muted); }
 .child-grid a:hover { border-color: var(--kb-border-strong); background: var(--kb-surface-hover); }
-.mini-folder { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 6px; background: var(--kb-code-bg); color: var(--kb-accent); }
+.mini-folder { width: 32px; height: 32px; display: grid; place-items: center; border: 1px solid var(--kb-icon-tile-border); border-radius: 6px; background: var(--kb-icon-tile-bg); color: var(--kb-accent); }
 .child-grid a > span:nth-child(2), .document-list a > span { min-width: 0; display: grid; gap: 5px; }
 .child-grid strong, .child-grid small, .document-list strong, .document-list small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .child-grid strong, .document-list strong { color: var(--kb-text); font-size: 13px; }

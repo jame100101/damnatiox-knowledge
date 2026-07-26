@@ -78,7 +78,7 @@ Agent 并不适合“目标完全模糊”的任务。理想任务虽然路径�
 - [OpenAI：A practical guide to building agents](https://openai.com/business/guides-and-resources/a-practical-guide-to-building-ai-agents/)
 
 <!-- agent-learning-expansion:v2 -->
-## 6. 用“路径不确定性”评估是否值得使用 Agent
+## 7. 用“路径不确定性”评估是否值得使用 Agent
 
 可把候选任务按五个维度打分，每项 0～2 分：
 
@@ -103,7 +103,7 @@ flowchart TD
   R -->|否| H[Agent 建议 + 人工提交]
 ```
 
-## 7. 典型适合与不适合任务
+## 8. 典型适合与不适合任务
 
 **较适合**：跨多个来源的研究、代码库定位与修改、故障诊断、复杂工单处理、需要试探和验证的浏览器操作。它们的共同点是下一步依赖刚获得的信息。
 
@@ -111,7 +111,7 @@ flowchart TD
 
 **先重构任务再考虑 Agent**：目标只有“做得更好”、没有成功标准；工具返回没有稳定 schema；数据权限没有边界；任何一步失败都会产生不可逆影响。
 
-## 8. 小规模验证方法
+## 9. 小规模验证方法
 
 先收集 30～100 个真实任务样本，建立普通 LLM 或 Workflow 基线，再比较 Agent 版本的任务完成率、人工接管率、P95 延迟、单任务成本和副作用错误。若 Agent 只提升了语言流畅度，却显著增加路径波动与运维成本，应回退到更简单结构。
 
