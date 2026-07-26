@@ -31,7 +31,98 @@ assistant: tool_call(...) 或 final_answer
 
 ## 3. 参考实现
 
-```ts
+```python group=multi-3d8a038d43df label=Python
+async def run_agent(goal, tools, options):
+    state = create_initial_state(goal, options)
+
+    while state.step < state.max_steps and now_ms() < state.deadline:
+        response = await call_model(
+            messages=state.messages,
+            tools=[to_tool_schema(tool) for tool in tools],
+            abort_signal=state.abort_signal,
+        )
+        if response.type == "final":
+            return validate_final(response.text, state)
+
+        for call in response.tool_calls:
+            tool = find_tool(tools, call.name)
+            parsed = tool.input_schema.safe_parse(call.arguments)
+            result = (
+                await execute_with_timeout(tool, parsed.data)
+                if parsed.success
+                else invalid_arguments_result(parsed.error)
+            )
+            state.messages.append(to_tool_result_message(call.id, result))
+            state.trace.append({"call": call, "result": result})
+        state.step += 1
+
+    return stop_result(state)
+```
+
+```rust group=multi-3d8a038d43df label=Rust
+async fn run_agent(
+    goal: &str,
+    tools: &[Tool],
+    options: Options,
+) -> Result<FinalResult, AgentError> {
+    let mut state = create_initial_state(goal, options);
+
+    while state.step < state.max_steps && now_ms() < state.deadline {
+        let response = call_model(
+            &state.messages,
+            tools.iter().map(to_tool_schema).collect(),
+            &state.abort_signal,
+        )
+        .await?;
+        if let ModelResponse::Final { text } = response {
+            return Ok(validate_final(&text, &state));
+        }
+
+        for call in response.tool_calls() {
+            let tool = find_tool(tools, &call.name)?;
+            let result = match tool.input_schema.safe_parse(&call.arguments) {
+                Ok(input) => execute_with_timeout(tool, input).await,
+                Err(error) => invalid_arguments_result(error),
+            };
+            state.messages.push(to_tool_result_message(&call.id, &result));
+            state.trace.push(TraceItem { call, result });
+        }
+        state.step += 1;
+    }
+
+    Ok(stop_result(&state))
+}
+```
+
+```javascript group=multi-3d8a038d43df label=JavaScript
+async function runAgent(goal, tools, options) {
+  const state = createInitialState(goal, options)
+
+  while (state.step < state.maxSteps && Date.now() < state.deadline) {
+    const response = await callModel({
+      messages: state.messages,
+      tools: tools.map(toToolSchema),
+      signal: state.abortSignal,
+    })
+    if (response.type === 'final') return validateFinal(response.text, state)
+
+    for (const call of response.toolCalls) {
+      const tool = findTool(tools, call.name)
+      const parsed = tool.inputSchema.safeParse(call.arguments)
+      const result = parsed.success
+        ? await executeWithTimeout(tool, parsed.data)
+        : invalidArgumentsResult(parsed.error)
+      state.messages.push(toToolResultMessage(call.id, result))
+      state.trace.push({ call, result })
+    }
+    state.step += 1
+  }
+
+  return stopResult(state)
+}
+```
+
+```typescript group=multi-3d8a038d43df label=TypeScript
 async function runAgent(goal: string, tools: Tool[], options: Options) {
   const state = createInitialState(goal, options)
 
@@ -100,6 +191,7 @@ async function runAgent(goal: string, tools: Tool[], options: Options) {
 - [Gemini Function Calling](https://ai.google.dev/gemini-api/docs/function-calling)
 
 <!-- agent-learning-expansion:v2 -->
+
 ## 6. 一轮运行的协议边界
 
 一轮并不是“调用一次模型”这么简单，而是以下协议的组合：
@@ -130,7 +222,100 @@ sequenceDiagram
 
 ## 7. 决策、执行和验证要使用不同类型
 
-```ts
+```python group=multi-2ba42f5c714d label=Python
+from dataclasses import dataclass, field
+from typing import Any, Literal
+
+@dataclass(frozen=True)
+class ToolDecision:
+    kind: Literal["tool"]
+    call_id: str
+    name: str
+    arguments: Any
+
+@dataclass(frozen=True)
+class ToolResult:
+    ok: bool
+    call_id: str
+    data: Any | None = None
+    evidence: tuple["EvidenceItem", ...] = ()
+    error: "ToolError | None" = None
+
+@dataclass(frozen=True)
+class FinalResult:
+    ok: bool
+    stop_reason: Literal[
+        "COMPLETED", "MAX_STEPS", "TIMEOUT", "CANCELLED", "ERROR"
+    ]
+    evidence: tuple["EvidenceItem", ...] = ()
+    answer: str | None = None
+```
+
+```rust group=multi-2ba42f5c714d label=Rust
+use serde_json::Value;
+
+struct ToolDecision {
+    kind: &'static str,
+    call_id: String,
+    name: String,
+    arguments: Value,
+}
+
+enum ToolResult {
+    Ok {
+        call_id: String,
+        data: Value,
+        evidence: Vec<EvidenceItem>,
+    },
+    Err {
+        call_id: String,
+        error: ToolError,
+    },
+}
+
+enum StopReason {
+    Completed,
+    MaxSteps,
+    Timeout,
+    Cancelled,
+    Error,
+}
+
+struct FinalResult {
+    ok: bool,
+    answer: Option<String>,
+    stop_reason: StopReason,
+    evidence: Vec<EvidenceItem>,
+}
+```
+
+```javascript group=multi-2ba42f5c714d label=JavaScript
+/**
+ * @typedef {{
+ *   kind: 'tool',
+ *   callId: string,
+ *   name: string,
+ *   arguments: unknown
+ * }} ToolDecision
+ *
+ * @typedef {{
+ *   ok: boolean,
+ *   callId: string,
+ *   data?: unknown,
+ *   evidence?: EvidenceItem[],
+ *   error?: ToolError
+ * }} ToolResult
+ *
+ * @typedef {{
+ *   ok: boolean,
+ *   answer?: string,
+ *   stopReason: 'COMPLETED'|'MAX_STEPS'|'TIMEOUT'|'CANCELLED'|'ERROR',
+ *   evidence: EvidenceItem[]
+ * }} FinalResult
+ */
+```
+
+```typescript group=multi-2ba42f5c714d label=TypeScript
 type ToolDecision = {
   kind: 'tool'
   callId: string

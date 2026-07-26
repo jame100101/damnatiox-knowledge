@@ -11,7 +11,53 @@
 
 ## 2. 数据结构
 
-```ts
+```python group=multi-62f998e556fa label=Python
+from dataclasses import dataclass, field
+
+@dataclass
+class SessionMemory:
+    session_id: str
+    goal: str
+    plan: list["PlanStep"]
+    working_facts: list["Fact"]
+    attempts: list["Attempt"]
+    evidence_refs: list[str]
+    pending_confirmations: list["Confirmation"]
+    checkpoint: int
+    updated_at: str
+```
+
+```rust group=multi-62f998e556fa label=Rust
+struct SessionMemory {
+    session_id: String,
+    goal: String,
+    plan: Vec<PlanStep>,
+    working_facts: Vec<Fact>,
+    attempts: Vec<Attempt>,
+    evidence_refs: Vec<String>,
+    pending_confirmations: Vec<Confirmation>,
+    checkpoint: u64,
+    updated_at: String,
+}
+```
+
+```javascript group=multi-62f998e556fa label=JavaScript
+/**
+ * @typedef {{
+ *   sessionId: string,
+ *   goal: string,
+ *   plan: PlanStep[],
+ *   workingFacts: Fact[],
+ *   attempts: Attempt[],
+ *   evidenceRefs: string[],
+ *   pendingConfirmations: Confirmation[],
+ *   checkpoint: number,
+ *   updatedAt: string
+ * }} SessionMemory
+ */
+```
+
+```typescript group=multi-62f998e556fa label=TypeScript
 type SessionMemory = {
   sessionId: string
   goal: string
@@ -66,6 +112,7 @@ type SessionMemory = {
 - 过期会话是否按策略清理。
 
 <!-- agent-learning-expansion:v2 -->
+
 ## 7. 短期记忆的工程形态：Thread State + Checkpoint
 
 短期记忆通常绑定 `thread_id`，包含消息、当前计划、工具结果、上传文件引用、待审批动作和阶段性产物。每个关键步骤写 checkpoint，恢复时从最后一个一致状态继续。

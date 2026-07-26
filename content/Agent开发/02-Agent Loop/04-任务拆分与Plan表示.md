@@ -283,6 +283,126 @@ class PlanStep:
     plan_version: int = 1
 ```
 
+```rust group=plan-contract label=Rust
+#[derive(Debug, Clone)]
+enum StepStatus {
+    Planned,
+    Ready,
+    Running,
+    WaitingApproval,
+    Succeeded,
+    Partial,
+    Blocked,
+    Failed,
+    Cancelled,
+    Stale,
+}
+
+#[derive(Debug, Clone)]
+struct ArtifactRef {
+    artifact_id: String,
+    version: String,
+    media_type: String,
+    digest: Option<String>,
+}
+
+enum AcceptanceCriterion {
+    CommandExit { command_ref: String, expected_exit_code: i32 },
+    Schema { artifact_ref: String, schema_id: String },
+    StatePredicate {
+        predicate_id: String,
+        expected: serde_json::Value,
+    },
+    HumanReview { checklist_id: String },
+}
+
+struct StepBudget {
+    max_attempts: u32,
+    timeout_ms: u64,
+    max_tool_calls: Option<u32>,
+    max_cost_usd: Option<f64>,
+}
+
+struct PlanStep {
+    id: String,
+    title: String,
+    objective: String,
+    depends_on: Vec<String>,
+    input_refs: Vec<ArtifactRef>,
+    expected_outputs: Vec<ExpectedOutput>,
+    acceptance_criteria: Vec<AcceptanceCriterion>,
+    allowed_tools: Vec<String>,
+    read_scopes: Vec<String>,
+    write_scopes: Vec<String>,
+    budget: StepBudget,
+    priority: i32,
+    status: StepStatus,
+    attempt: u32,
+    evidence_refs: Vec<String>,
+    plan_version: u32,
+}
+
+struct Plan {
+    plan_id: String,
+    goal_id: String,
+    version: u32,
+    created_from_observation_version: u32,
+    rationale: String,
+    steps: Vec<PlanStep>,
+    success_contract: SuccessContract,
+}
+```
+
+```javascript group=plan-contract label=JavaScript
+/**
+ * @typedef {'planned'|'ready'|'running'|'waiting_approval'|'succeeded'|
+ *   'partial'|'blocked'|'failed'|'cancelled'|'stale'} StepStatus
+ *
+ * @typedef {{
+ *   artifactId: string,
+ *   version: string,
+ *   mediaType: string,
+ *   digest?: string
+ * }} ArtifactRef
+ *
+ * @typedef {{
+ *   maxAttempts: number,
+ *   timeoutMs: number,
+ *   maxToolCalls?: number,
+ *   maxCostUsd?: number
+ * }} StepBudget
+ *
+ * @typedef {{
+ *   id: string,
+ *   title: string,
+ *   objective: string,
+ *   dependsOn: string[],
+ *   inputRefs: ArtifactRef[],
+ *   expectedOutputs: Array<{ name: string, schemaId?: string, mediaType: string }>,
+ *   acceptanceCriteria: AcceptanceCriterion[],
+ *   allowedTools: string[],
+ *   readScopes: string[],
+ *   writeScopes: string[],
+ *   budget: StepBudget,
+ *   priority: number,
+ *   status: StepStatus,
+ *   attempt: number,
+ *   evidenceRefs: string[],
+ *   planVersion: number
+ * }} PlanStep
+ *
+ * @typedef {{
+ *   planId: string,
+ *   goalId: string,
+ *   version: number,
+ *   createdFromObservationVersion: number,
+ *   rationale: string,
+ *   steps: PlanStep[],
+ *   successContract: SuccessContract
+ * }} Plan
+ */
+```
+
 ### 5.1 为什么需要 `createdFromObservationVersion`
 
 计划来自某一时刻的世界状态。若文件、数据库记录或远端分支之后变化，旧计划可能已经过期。记录观察版本后，Runner 可在执行写操作前比较：
@@ -457,6 +577,115 @@ function validateDag(steps: PlanStep[]): string[] {
       .filter(([, degree]) => degree > 0)
       .map(([id]) => id)
     throw new Error(`DEPENDENCY_CYCLE:${cyclic.sort().join(',')}`)
+  }
+  return order
+}
+```
+
+```rust group=plan-validation label=Rust
+use std::collections::{BTreeSet, HashMap};
+
+fn validate_dag(steps: &[PlanStep]) -> Result<Vec<String>, PlanValidationError> {
+    let by_id: HashMap<_, _> = steps.iter().map(|step| (&step.id, step)).collect();
+    if by_id.len() != steps.len() {
+        return Err(PlanValidationError::DuplicateStepId);
+    }
+
+    let mut indegree: HashMap<String, usize> =
+        steps.iter().map(|step| (step.id.clone(), 0)).collect();
+    let mut dependents: HashMap<String, Vec<String>> = HashMap::new();
+
+    for step in steps {
+        for dependency in &step.depends_on {
+            if !by_id.contains_key(dependency) {
+                return Err(PlanValidationError::UnknownDependency {
+                    step: step.id.clone(),
+                    dependency: dependency.clone(),
+                });
+            }
+            if dependency == &step.id {
+                return Err(PlanValidationError::SelfDependency(step.id.clone()));
+            }
+            *indegree.get_mut(&step.id).unwrap() += 1;
+            dependents
+                .entry(dependency.clone())
+                .or_default()
+                .push(step.id.clone());
+        }
+    }
+
+    let mut ready: BTreeSet<String> = indegree
+        .iter()
+        .filter(|(_, degree)| **degree == 0)
+        .map(|(id, _)| id.clone())
+        .collect();
+    let mut order = Vec::new();
+
+    while let Some(current) = ready.pop_first() {
+        order.push(current.clone());
+        for child in dependents.get(&current).into_iter().flatten() {
+            let degree = indegree.get_mut(child).unwrap();
+            *degree -= 1;
+            if *degree == 0 {
+                ready.insert(child.clone());
+            }
+        }
+    }
+
+    if order.len() != steps.len() {
+        let cyclic = indegree
+            .into_iter()
+            .filter(|(_, degree)| *degree > 0)
+            .map(|(id, _)| id)
+            .collect();
+        return Err(PlanValidationError::DependencyCycle(cyclic));
+    }
+    Ok(order)
+}
+```
+
+```javascript group=plan-validation label=JavaScript
+function validateDag(steps) {
+  const byId = new Map(steps.map((step) => [step.id, step]))
+  if (byId.size !== steps.length) throw new Error('DUPLICATE_STEP_ID')
+
+  const indegree = new Map(steps.map((step) => [step.id, 0]))
+  const dependents = new Map()
+  for (const step of steps) {
+    for (const dependency of step.dependsOn) {
+      if (!byId.has(dependency)) {
+        throw new Error('UNKNOWN_DEPENDENCY:' + step.id + ':' + dependency)
+      }
+      if (dependency === step.id) {
+        throw new Error('SELF_DEPENDENCY:' + step.id)
+      }
+      indegree.set(step.id, (indegree.get(step.id) ?? 0) + 1)
+      dependents.set(dependency, [...(dependents.get(dependency) ?? []), step.id])
+    }
+  }
+
+  const ready = [...indegree]
+    .filter(([, degree]) => degree === 0)
+    .map(([id]) => id)
+    .sort()
+  const order = []
+  while (ready.length > 0) {
+    const current = ready.shift()
+    order.push(current)
+    for (const child of (dependents.get(current) ?? []).sort()) {
+      const next = (indegree.get(child) ?? 0) - 1
+      indegree.set(child, next)
+      if (next === 0) ready.push(child)
+    }
+    ready.sort()
+  }
+
+  if (order.length !== steps.length) {
+    const cyclic = [...indegree]
+      .filter(([, degree]) => degree > 0)
+      .map(([id]) => id)
+      .sort()
+    throw new Error('DEPENDENCY_CYCLE:' + cyclic.join(','))
   }
   return order
 }

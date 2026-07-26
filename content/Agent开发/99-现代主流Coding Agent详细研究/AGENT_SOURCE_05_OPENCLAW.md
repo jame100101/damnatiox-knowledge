@@ -1004,10 +1004,35 @@ flowchart TD
 
 ### 11.2 当前轮隔离
 
-```python
+```python group=multi-16f0b7f71a6d label=Python
 class EvidenceRegistry:
     turn_id: str
     items: dict[str, EvidenceItem]
+```
+
+```rust group=multi-16f0b7f71a6d label=Rust
+use std::collections::HashMap;
+
+struct EvidenceRegistry {
+    turn_id: String,
+    items: HashMap<String, EvidenceItem>,
+}
+```
+
+```javascript group=multi-16f0b7f71a6d label=JavaScript
+/**
+ * @typedef {{
+ *   turnId: string,
+ *   items: Map<string, EvidenceItem>
+ * }} EvidenceRegistry
+ */
+```
+
+```typescript group=multi-16f0b7f71a6d label=TypeScript
+type EvidenceRegistry = {
+  turnId: string
+  items: Map<string, EvidenceItem>
+}
 ```
 
 只有 `item.turn_id == current_turn_id` 的 evidence 默认进入 final validator。历史资料若重新使用，应在本轮重新检索/导入并生成新 provenance。
@@ -1067,7 +1092,40 @@ TypeBox definitions
 
 不要只在 API 边界使用 schema，内部关键状态应是 discriminated union：
 
-```ts
+```python group=multi-e4109b4ff815 label=Python
+from dataclasses import dataclass
+from typing import Literal
+
+@dataclass(frozen=True)
+class ToolExecution:
+    status: Literal["queued", "running", "completed", "failed"]
+    call_id: str
+    started_at: int | None = None
+    result: "ToolResult | None" = None
+    error: "ToolError | None" = None
+```
+
+```rust group=multi-e4109b4ff815 label=Rust
+enum ToolExecution {
+    Queued { call_id: String },
+    Running { call_id: String, started_at: u64 },
+    Completed { call_id: String, result: ToolResult },
+    Failed { call_id: String, error: ToolError },
+}
+```
+
+```javascript group=multi-e4109b4ff815 label=JavaScript
+/**
+ * @typedef (
+ *   { status: 'queued', callId: string } |
+ *   { status: 'running', callId: string, startedAt: number } |
+ *   { status: 'completed', callId: string, result: ToolResult } |
+ *   { status: 'failed', callId: string, error: ToolError }
+ * ) ToolExecution
+ */
+```
+
+```typescript group=multi-e4109b4ff815 label=TypeScript
 type ToolExecution =
   | { status: 'queued'; callId: string }
   | { status: 'running'; callId: string; startedAt: number }

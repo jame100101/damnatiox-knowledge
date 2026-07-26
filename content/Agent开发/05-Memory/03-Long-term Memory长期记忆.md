@@ -13,7 +13,74 @@
 
 ## 2. Memory Record
 
-```ts
+```python group=multi-0b088dbae726 label=Python
+from dataclasses import dataclass
+from typing import Literal
+
+@dataclass(frozen=True)
+class MemoryRecord:
+    id: str
+    kind: Literal["semantic", "episodic", "procedural", "preference"]
+    subject: str
+    content: str
+    source_refs: tuple[str, ...]
+    confidence: float
+    valid_from: str
+    scope: Literal["user", "workspace", "project", "task"]
+    sensitivity: str
+    valid_until: str | None = None
+    supersedes: str | None = None
+```
+
+```rust group=multi-0b088dbae726 label=Rust
+enum MemoryKind {
+    Semantic,
+    Episodic,
+    Procedural,
+    Preference,
+}
+
+enum MemoryScope {
+    User,
+    Workspace,
+    Project,
+    Task,
+}
+
+struct MemoryRecord {
+    id: String,
+    kind: MemoryKind,
+    subject: String,
+    content: String,
+    source_refs: Vec<String>,
+    confidence: f64,
+    valid_from: String,
+    valid_until: Option<String>,
+    supersedes: Option<String>,
+    scope: MemoryScope,
+    sensitivity: String,
+}
+```
+
+```javascript group=multi-0b088dbae726 label=JavaScript
+/**
+ * @typedef {{
+ *   id: string,
+ *   kind: 'semantic'|'episodic'|'procedural'|'preference',
+ *   subject: string,
+ *   content: string,
+ *   sourceRefs: string[],
+ *   confidence: number,
+ *   validFrom: string,
+ *   validUntil?: string,
+ *   supersedes?: string,
+ *   scope: 'user'|'workspace'|'project'|'task',
+ *   sensitivity: string
+ * }} MemoryRecord
+ */
+```
+
+```typescript group=multi-0b088dbae726 label=TypeScript
 type MemoryRecord = {
   id: string
   kind: 'semantic' | 'episodic' | 'procedural' | 'preference'
@@ -83,13 +150,14 @@ type MemoryRecord = {
 - [Letta](https://github.com/letta-ai/letta)
 
 <!-- agent-learning-expansion:v2 -->
+
 ## 7. 长期记忆的三种语义
 
-| 类型 | 保存内容 | 示例 | 主要风险 |
-| --- | --- | --- | --- |
-| Semantic | 稳定事实与偏好 | 用户偏好简洁回答、项目使用 TypeScript | 事实过期、主体混淆 |
-| Episodic | 过去经历与结果 | 某次部署失败原因及修复结果 | 过度类比、噪声累积 |
-| Procedural | 做事规则与经验 | 发布前必须运行哪些验证 | 与当前策略冲突、版本陈旧 |
+| 类型       | 保存内容       | 示例                                  | 主要风险                 |
+| ---------- | -------------- | ------------------------------------- | ------------------------ |
+| Semantic   | 稳定事实与偏好 | 用户偏好简洁回答、项目使用 TypeScript | 事实过期、主体混淆       |
+| Episodic   | 过去经历与结果 | 某次部署失败原因及修复结果            | 过度类比、噪声累积       |
+| Procedural | 做事规则与经验 | 发布前必须运行哪些验证                | 与当前策略冲突、版本陈旧 |
 
 长期记忆应有 namespace、主体、来源、时间、置信度、版本和过期策略。仅存一段无来源自然语言，会使后续系统难以判断该事实属于谁、是否仍有效。
 

@@ -46,7 +46,90 @@ requested path
 
 读取大型文件时应支持：
 
-```ts
+```python group=multi-06c388f06a7c label=Python
+from dataclasses import dataclass
+from typing import Literal
+
+@dataclass(frozen=True)
+class ReadFileRequest:
+    path: str
+    max_bytes: int
+    start_line: int | None = None
+    end_line: int | None = None
+    start_byte: int | None = None
+    encoding: Literal["utf-8", "binary", "auto"] = "auto"
+
+@dataclass(frozen=True)
+class ReadFileResult:
+    path: str
+    content: str
+    start_line: int
+    end_line: int
+    total_bytes: int
+    sha256: str
+    encoding: str
+    newline: Literal["lf", "crlf", "mixed", "none"]
+    bom: bool
+    truncated: bool
+```
+
+```rust group=multi-06c388f06a7c label=Rust
+enum Encoding {
+    Utf8,
+    Binary,
+    Auto,
+}
+
+struct ReadFileRequest {
+    path: String,
+    start_line: Option<usize>,
+    end_line: Option<usize>,
+    start_byte: Option<u64>,
+    max_bytes: usize,
+    encoding: Encoding,
+}
+
+struct ReadFileResult {
+    path: String,
+    content: String,
+    start_line: usize,
+    end_line: usize,
+    total_bytes: u64,
+    sha256: String,
+    encoding: String,
+    newline: String,
+    bom: bool,
+    truncated: bool,
+}
+```
+
+```javascript group=multi-06c388f06a7c label=JavaScript
+/**
+ * @typedef {{
+ *   path: string,
+ *   startLine?: number,
+ *   endLine?: number,
+ *   startByte?: number,
+ *   maxBytes: number,
+ *   encoding?: 'utf-8'|'binary'|'auto'
+ * }} ReadFileRequest
+ *
+ * @typedef {{
+ *   path: string,
+ *   content: string,
+ *   startLine: number,
+ *   endLine: number,
+ *   totalBytes: number,
+ *   sha256: string,
+ *   encoding: string,
+ *   newline: 'lf'|'crlf'|'mixed'|'none',
+ *   bom: boolean,
+ *   truncated: boolean
+ * }} ReadFileResult
+ */
+```
+
+```typescript group=multi-06c388f06a7c label=TypeScript
 type ReadFileRequest = {
   path: string
   startLine?: number
@@ -232,7 +315,66 @@ export async function atomicWrite(path: string, content: string): Promise<void> 
 
 ## 7. FileResult 与变更证据
 
-```ts
+```python group=multi-fce4b43079d3 label=Python
+from dataclasses import dataclass
+from typing import Literal
+
+@dataclass(frozen=True)
+class FileWriteResult:
+    ok: bool
+    path: str
+    operation: Literal["create", "replace", "patch"]
+    old_sha256: str | None
+    new_sha256: str
+    bytes_written: int
+    newline: Literal["lf", "crlf", "mixed", "none"]
+    diff_ref: str
+    backup_ref: str | None = None
+    applied_hunks: int | None = None
+    rejected_hunks: int | None = None
+```
+
+```rust group=multi-fce4b43079d3 label=Rust
+enum WriteOperation {
+    Create,
+    Replace,
+    Patch,
+}
+
+struct FileWriteResult {
+    ok: bool,
+    path: String,
+    operation: WriteOperation,
+    old_sha256: Option<String>,
+    new_sha256: String,
+    bytes_written: usize,
+    newline: String,
+    diff_ref: String,
+    backup_ref: Option<String>,
+    applied_hunks: Option<usize>,
+    rejected_hunks: Option<usize>,
+}
+```
+
+```javascript group=multi-fce4b43079d3 label=JavaScript
+/**
+ * @typedef {{
+ *   ok: boolean,
+ *   path: string,
+ *   operation: 'create'|'replace'|'patch',
+ *   oldSha256: string|null,
+ *   newSha256: string,
+ *   bytesWritten: number,
+ *   newline: 'lf'|'crlf'|'mixed'|'none',
+ *   diffRef: string,
+ *   backupRef?: string,
+ *   appliedHunks?: number,
+ *   rejectedHunks?: number
+ * }} FileWriteResult
+ */
+```
+
+```typescript group=multi-fce4b43079d3 label=TypeScript
 type FileWriteResult = {
   ok: boolean
   path: string

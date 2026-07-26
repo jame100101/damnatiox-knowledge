@@ -298,7 +298,7 @@ deny > ask > allow
 
 Claude 原生 `tool_result.content` 可以是文本或内容块，但项目内部不应只传字符串：
 
-```python
+```python group=multi-94093b55a98f label=Python
 @dataclass(frozen=True)
 class ToolResult:
     call_id: str
@@ -313,6 +313,68 @@ class ToolResult:
     retryable: bool
     duration_ms: int
     truncated: bool
+```
+
+```rust group=multi-94093b55a98f label=Rust
+enum ToolStatus {
+    Success,
+    Partial,
+    Empty,
+    RetryableError,
+    FatalError,
+    Blocked,
+    Cancelled,
+}
+
+struct ToolResult {
+    call_id: String,
+    tool_name: String,
+    status: ToolStatus,
+    content: String,
+    evidence_ids: Vec<String>,
+    error_code: Option<String>,
+    retryable: bool,
+    duration_ms: u64,
+    truncated: bool,
+}
+```
+
+```javascript group=multi-94093b55a98f label=JavaScript
+/**
+ * @typedef {{
+ *   callId: string,
+ *   toolName: string,
+ *   status: 'success'|'partial'|'empty'|'retryable_error'|
+ *     'fatal_error'|'blocked'|'cancelled',
+ *   content: string,
+ *   evidenceIds: string[],
+ *   errorCode?: string,
+ *   retryable: boolean,
+ *   durationMs: number,
+ *   truncated: boolean
+ * }} ToolResult
+ */
+```
+
+```typescript group=multi-94093b55a98f label=TypeScript
+type ToolResult = {
+  callId: string
+  toolName: string
+  status:
+    | 'success'
+    | 'partial'
+    | 'empty'
+    | 'retryable_error'
+    | 'fatal_error'
+    | 'blocked'
+    | 'cancelled'
+  content: string
+  evidenceIds: string[]
+  errorCode?: string
+  retryable: boolean
+  durationMs: number
+  truncated: boolean
+}
 ```
 
 最后再由 provider adapter 映射成 Claude `tool_result`。

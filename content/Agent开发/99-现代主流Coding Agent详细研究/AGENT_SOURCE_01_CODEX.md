@@ -422,7 +422,7 @@ Skill 可以声明其任务依赖某类工具/MCP server。系统在调用前检
 
 ### 4.7 对 `agent_learing` 的最小规范建议
 
-```python
+```python group=multi-c21f640c551f label=Python
 @dataclass(frozen=True)
 class SkillMetadata:
     name: str
@@ -432,6 +432,47 @@ class SkillMetadata:
     required_tools: tuple[str, ...] = ()
     allow_implicit: bool = True
     version: str | None = None
+```
+
+```rust group=multi-c21f640c551f label=Rust
+use std::path::PathBuf;
+
+#[derive(Debug, Clone)]
+struct SkillMetadata {
+    name: String,
+    description: String,
+    path: PathBuf,
+    allowed_tools: Vec<String>,
+    required_tools: Vec<String>,
+    allow_implicit: bool,
+    version: Option<String>,
+}
+```
+
+```javascript group=multi-c21f640c551f label=JavaScript
+/**
+ * @typedef {{
+ *   name: string,
+ *   description: string,
+ *   path: string,
+ *   allowedTools?: string[],
+ *   requiredTools?: string[],
+ *   allowImplicit?: boolean,
+ *   version?: string
+ * }} SkillMetadata
+ */
+```
+
+```typescript group=multi-c21f640c551f label=TypeScript
+type SkillMetadata = {
+  name: string
+  description: string
+  path: string
+  allowedTools: string[]
+  requiredTools: string[]
+  allowImplicit: boolean
+  version?: string
+}
 ```
 
 再把：
@@ -500,9 +541,36 @@ ToolResult
 
 如果移植到你的项目，建议保留统一接口：
 
-```python
+```python group=multi-fd042b49ba11 label=Python
 class Retriever(Protocol):
     def retrieve(self, query: RetrievalQuery) -> list[EvidenceItem]: ...
+```
+
+```rust group=multi-fd042b49ba11 label=Rust
+trait Retriever {
+    fn retrieve(
+        &self,
+        query: &RetrievalQuery,
+    ) -> Result<Vec<EvidenceItem>, RetrievalError>;
+}
+```
+
+```javascript group=multi-fd042b49ba11 label=JavaScript
+class Retriever {
+  /**
+   * @param {RetrievalQuery} query
+   * @returns {Promise<EvidenceItem[]>}
+   */
+  async retrieve(query) {
+    throw new Error('implement retrieve(query)')
+  }
+}
+```
+
+```typescript group=multi-fd042b49ba11 label=TypeScript
+interface Retriever {
+  retrieve(query: RetrievalQuery): Promise<EvidenceItem[]>
+}
 ```
 
 这样 local vector RAG、BM25、web、session search 可共用下游证据处理，但各自保留不同的召回实现。

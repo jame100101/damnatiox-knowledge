@@ -24,7 +24,66 @@ Terminal Tool 不负责替 Agent 判断任务是否完成。`npm test` 的退出
 
 一个适合 Agent 的请求契约应显式表达执行语义：
 
-```ts
+```python group=multi-06c51b836bc8 label=Python
+from dataclasses import dataclass, field
+from typing import Literal
+
+@dataclass(frozen=True)
+class CommandRequest:
+    executable: str
+    args: tuple[str, ...]
+    cwd: str
+    timeout_ms: int
+    max_output_bytes: int
+    side_effect: Literal["read", "write", "network", "process"]
+    env: dict[str, str] = field(default_factory=dict)
+    stdin: str | None = None
+    expected_exit_codes: tuple[int, ...] = (0,)
+    shell_executable: str | None = None
+```
+
+```rust group=multi-06c51b836bc8 label=Rust
+use std::collections::HashMap;
+
+enum SideEffect {
+    Read,
+    Write,
+    Network,
+    Process,
+}
+
+struct CommandRequest {
+    executable: String,
+    args: Vec<String>,
+    cwd: String,
+    env: HashMap<String, String>,
+    stdin: Option<String>,
+    timeout_ms: u64,
+    max_output_bytes: usize,
+    expected_exit_codes: Vec<i32>,
+    shell_executable: Option<String>,
+    side_effect: SideEffect,
+}
+```
+
+```javascript group=multi-06c51b836bc8 label=JavaScript
+/**
+ * @typedef {{
+ *   executable: string,
+ *   args: string[],
+ *   cwd: string,
+ *   env?: Record<string, string>,
+ *   stdin?: string,
+ *   timeoutMs: number,
+ *   maxOutputBytes: number,
+ *   expectedExitCodes?: number[],
+ *   shell?: false|{ executable: string },
+ *   sideEffect: 'read'|'write'|'network'|'process'
+ * }} CommandRequest
+ */
+```
+
+```typescript group=multi-06c51b836bc8 label=TypeScript
 type CommandRequest = {
   executable: string
   args: string[]

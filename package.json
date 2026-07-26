@@ -20,7 +20,8 @@
     "test:component": "vitest run tests/component",
     "test:e2e": "playwright test",
     "test:security": "vitest run tests/security",
-    "content:import-agent-learning": "node scripts/import-agent-learning.mjs"
+    "content:import-agent-learning": "node scripts/import-agent-learning.mjs",
+    "content:validate-code-groups": "node scripts/validate-code-language-groups.mjs"
   },
   "overrides": {
     "brace-expansion": "5.0.8",

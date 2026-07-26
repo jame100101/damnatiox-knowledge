@@ -30,7 +30,82 @@ Context Builder 不生成新的任务事实。摘要、压缩和排序都可能�
 
 ## 2. ContextFragment 数据契约
 
-```ts
+```python group=multi-3cbde5b88823 label=Python
+from dataclasses import dataclass
+from typing import Literal
+
+@dataclass(frozen=True)
+class ContextFragment:
+    id: str
+    kind: Literal[
+        "policy", "instruction", "goal", "success_contract", "plan",
+        "history", "tool_spec", "tool_result", "evidence", "memory",
+        "user_input",
+    ]
+    source_ref: str
+    trust: Literal["runtime", "user", "workspace", "external"]
+    priority: int
+    required: bool
+    freshness: float
+    token_count: int
+    content_hash: str
+    content: tuple["MessageBlock", ...]
+    selection_reason: str | None = None
+    truncated: bool = False
+```
+
+```rust group=multi-3cbde5b88823 label=Rust
+enum FragmentKind {
+    Policy,
+    Instruction,
+    Goal,
+    SuccessContract,
+    Plan,
+    History,
+    ToolSpec,
+    ToolResult,
+    Evidence,
+    Memory,
+    UserInput,
+}
+
+struct ContextFragment {
+    id: String,
+    kind: FragmentKind,
+    source_ref: String,
+    trust: String,
+    priority: i32,
+    required: bool,
+    freshness: f64,
+    token_count: usize,
+    content_hash: String,
+    selection_reason: Option<String>,
+    truncated: bool,
+    content: Vec<MessageBlock>,
+}
+```
+
+```javascript group=multi-3cbde5b88823 label=JavaScript
+/**
+ * @typedef {{
+ *   id: string,
+ *   kind: 'policy'|'instruction'|'goal'|'success_contract'|'plan'|
+ *     'history'|'tool_spec'|'tool_result'|'evidence'|'memory'|'user_input',
+ *   sourceRef: string,
+ *   trust: 'runtime'|'user'|'workspace'|'external',
+ *   priority: number,
+ *   required: boolean,
+ *   freshness: number,
+ *   tokenCount: number,
+ *   contentHash: string,
+ *   selectionReason?: string,
+ *   truncated?: boolean,
+ *   content: MessageBlock[]
+ * }} ContextFragment
+ */
+```
+
+```typescript group=multi-3cbde5b88823 label=TypeScript
 type ContextFragment = {
   id: string
   kind:
@@ -117,7 +192,84 @@ optional examples budget
 
 选择算法的教学骨架：
 
-```ts
+```python group=multi-c0154ba14ac5 label=Python
+def select_context(fragments, budget):
+    required = [item for item in fragments if item.required]
+    used = sum(item.token_count for item in required)
+    if used > budget:
+        raise ValueError("REQUIRED_CONTEXT_EXCEEDS_BUDGET")
+
+    chosen = list(required)
+    remaining = budget - used
+    optional = sorted(
+        (item for item in fragments if not item.required),
+        key=lambda item: score(
+            item.priority, item.freshness, item.token_count
+        ),
+        reverse=True,
+    )
+    for item in optional:
+        if item.token_count <= remaining:
+            chosen.append(item)
+            remaining -= item.token_count
+    return order_by_semantic_layer(chosen)
+```
+
+```rust group=multi-c0154ba14ac5 label=Rust
+fn select_context(
+    fragments: &[ContextFragment],
+    budget: usize,
+) -> Result<Vec<&ContextFragment>, ContextError> {
+    let required: Vec<_> = fragments.iter().filter(|item| item.required).collect();
+    let used: usize = required.iter().map(|item| item.token_count).sum();
+    if used > budget {
+        return Err(ContextError::RequiredContextExceedsBudget);
+    }
+
+    let mut chosen = required;
+    let mut remaining = budget - used;
+    let mut optional: Vec<_> = fragments.iter().filter(|item| !item.required).collect();
+    optional.sort_by_key(|item| {
+        std::cmp::Reverse(score(item.priority, item.freshness, item.token_count))
+    });
+
+    for item in optional {
+        if item.token_count <= remaining {
+            remaining -= item.token_count;
+            chosen.push(item);
+        }
+    }
+    Ok(order_by_semantic_layer(chosen))
+}
+```
+
+```javascript group=multi-c0154ba14ac5 label=JavaScript
+function selectContext(fragments, budget) {
+  const required = fragments.filter((item) => item.required)
+  const used = required.reduce((sum, item) => sum + item.tokenCount, 0)
+  if (used > budget) throw new Error('REQUIRED_CONTEXT_EXCEEDS_BUDGET')
+
+  const chosen = [...required]
+  let remaining = budget - used
+  const optional = fragments
+    .filter((item) => !item.required)
+    .sort(
+      (a, b) =>
+        score(b.priority, b.freshness, b.tokenCount) -
+        score(a.priority, a.freshness, a.tokenCount),
+    )
+
+  for (const item of optional) {
+    if (item.tokenCount <= remaining) {
+      chosen.push(item)
+      remaining -= item.tokenCount
+    }
+  }
+  return orderBySemanticLayer(chosen)
+}
+```
+
+```typescript group=multi-c0154ba14ac5 label=TypeScript
 function selectContext(fragments: ContextFragment[], budget: number) {
   const required = fragments.filter((item) => item.required)
   const used = required.reduce((sum, item) => sum + item.tokenCount, 0)

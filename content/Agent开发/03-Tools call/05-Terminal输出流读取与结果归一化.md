@@ -53,7 +53,91 @@ stdout 与 stderr 都有有限缓冲区。如果父进程只读取 stdout，而�
 
 ## 4. 可恢复的输出事件协议
 
-```ts
+```python group=multi-2b574b43f4a5 label=Python
+from dataclasses import dataclass
+from typing import Literal
+
+@dataclass(frozen=True)
+class ProcessEvent:
+    seq: int
+    process_id: str
+    type: Literal[
+        "stdout", "stderr", "started", "exited", "timed_out", "cancelled"
+    ]
+    at: str
+    bytes: int | None = None
+    text: str | None = None
+    exit_code: int | None = None
+    signal: str | None = None
+
+@dataclass(frozen=True)
+class OutputPage:
+    process_id: str
+    from_cursor: int
+    next_cursor: int
+    events: tuple[ProcessEvent, ...]
+    running: bool
+    exit_code: int | None
+    truncated_before_cursor: bool
+    has_more: bool
+```
+
+```rust group=multi-2b574b43f4a5 label=Rust
+enum ProcessEventKind {
+    Stdout { bytes: usize, text: String },
+    Stderr { bytes: usize, text: String },
+    Started,
+    Exited { exit_code: Option<i32>, signal: Option<String> },
+    TimedOut,
+    Cancelled,
+}
+
+struct ProcessEvent {
+    seq: u64,
+    process_id: String,
+    at: String,
+    kind: ProcessEventKind,
+}
+
+struct OutputPage {
+    process_id: String,
+    from_cursor: u64,
+    next_cursor: u64,
+    events: Vec<ProcessEvent>,
+    running: bool,
+    exit_code: Option<i32>,
+    truncated_before_cursor: bool,
+    has_more: bool,
+}
+```
+
+```javascript group=multi-2b574b43f4a5 label=JavaScript
+/**
+ * @typedef {{
+ *   seq: number,
+ *   processId: string,
+ *   type: 'stdout'|'stderr'|'started'|'exited'|'timed_out'|'cancelled',
+ *   at: string,
+ *   bytes?: number,
+ *   text?: string,
+ *   exitCode?: number|null,
+ *   signal?: string|null
+ * }} ProcessEvent
+ *
+ * @typedef {{
+ *   processId: string,
+ *   fromCursor: number,
+ *   nextCursor: number,
+ *   events: ProcessEvent[],
+ *   running: boolean,
+ *   exitCode: number|null,
+ *   truncatedBeforeCursor: boolean,
+ *   hasMore: boolean
+ * }} OutputPage
+ */
+```
+
+```typescript group=multi-2b574b43f4a5 label=TypeScript
 type ProcessEvent =
   | {
       seq: number

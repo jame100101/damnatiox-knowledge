@@ -114,16 +114,20 @@ describe('MarkdownRenderer', () => {
   it('switches grouped code examples by language tab', async () => {
     const wrapper = mount(MarkdownRenderer, {
       props: {
-        source: `\`\`\`python group=agent-loop label=Python
+        source: `\`\`\`typescript group=agent-loop label=TypeScript
+console.log("observe")
+\`\`\`
+
+\`\`\`python group=agent-loop label=Python
 print("observe")
+\`\`\`
+
+\`\`\`javascript group=agent-loop label=JavaScript
+console.log("observe")
 \`\`\`
 
 \`\`\`rust group=agent-loop label=Rust
 println!("observe");
-\`\`\`
-
-\`\`\`typescript group=agent-loop label=TypeScript
-console.log("observe")
 \`\`\``,
       },
     })
@@ -131,7 +135,13 @@ console.log("observe")
     await flushPromises()
 
     const tabs = wrapper.findAll<HTMLButtonElement>('[role="tab"]')
-    expect(tabs.map((tab) => tab.text())).toEqual(['Python', 'Rust', 'TypeScript'])
+    expect(tabs.map((tab) => tab.text())).toEqual([
+      'Python',
+      'Rust',
+      'JavaScript',
+      'TypeScript',
+    ])
+    expect(wrapper.findAll<HTMLPreElement>('[role="tabpanel"]')).toHaveLength(4)
     expect(tabs[0]?.attributes('aria-selected')).toBe('true')
     expect(
       wrapper.findAll<HTMLPreElement>('[role="tabpanel"]')[1]?.element.hidden,
@@ -145,5 +155,8 @@ console.log("observe")
 
     await tabs[1]?.trigger('keydown', { key: 'ArrowRight' })
     expect(tabs[2]?.attributes('aria-selected')).toBe('true')
+
+    await tabs[2]?.trigger('keydown', { key: 'End' })
+    expect(tabs[3]?.attributes('aria-selected')).toBe('true')
   })
 })

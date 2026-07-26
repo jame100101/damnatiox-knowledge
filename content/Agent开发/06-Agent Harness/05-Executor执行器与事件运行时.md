@@ -33,7 +33,81 @@ flowchart LR
 
 ## 2. 输入契约
 
-```ts
+```python group=multi-64750cbe13bf label=Python
+from dataclasses import dataclass, field
+from typing import Any
+
+@dataclass(frozen=True)
+class ToolExecutionRequest:
+    run_id: str
+    turn_id: str
+    call_id: str
+    tool: dict[str, str]
+    arguments: Any
+    actor: dict[str, str]
+    workspace: dict[str, str]
+    deadline: int
+    cancellation_token: str
+    idempotency_key: str | None = None
+    approval_token: str | None = None
+    expected_state: dict[str, str] = field(default_factory=dict)
+```
+
+```rust group=multi-64750cbe13bf label=Rust
+use std::collections::HashMap;
+use serde_json::Value;
+
+struct ToolRef {
+    name: String,
+    requested_version: Option<String>,
+}
+
+struct Actor {
+    user_id: String,
+    agent_id: String,
+}
+
+struct Workspace {
+    id: String,
+    root: String,
+}
+
+struct ToolExecutionRequest {
+    run_id: String,
+    turn_id: String,
+    call_id: String,
+    tool: ToolRef,
+    arguments: Value,
+    actor: Actor,
+    workspace: Workspace,
+    deadline: u64,
+    cancellation_token: String,
+    idempotency_key: Option<String>,
+    approval_token: Option<String>,
+    expected_state: HashMap<String, String>,
+}
+```
+
+```javascript group=multi-64750cbe13bf label=JavaScript
+/**
+ * @typedef {{
+ *   runId: string,
+ *   turnId: string,
+ *   callId: string,
+ *   tool: { name: string, requestedVersion?: string },
+ *   arguments: unknown,
+ *   actor: { userId: string, agentId: string },
+ *   workspace: { id: string, root: string },
+ *   deadline: number,
+ *   cancellationToken: string,
+ *   idempotencyKey?: string,
+ *   approvalToken?: string,
+ *   expectedState?: Record<string, string>
+ * }} ToolExecutionRequest
+ */
+```
+
+```typescript group=multi-64750cbe13bf label=TypeScript
 type ToolExecutionRequest = {
   runId: string
   turnId: string
@@ -140,7 +214,84 @@ database mutation -> transaction result/query
 
 ## 4. Result 的成功、失败与未知
 
-```ts
+```python group=multi-261946e036f9 label=Python
+from dataclasses import dataclass, field
+from typing import Any, Generic, Literal, TypeVar
+
+T = TypeVar("T")
+
+@dataclass(frozen=True)
+class ToolResult(Generic[T]):
+    call_id: str
+    tool_version: str
+    outcome: Literal["succeeded", "failed", "partial", "unknown", "cancelled"]
+    side_effect: dict[str, Any]
+    evidence: tuple["EvidenceItem", ...]
+    timing: dict[str, int]
+    truncated: bool
+    data: T | None = None
+    error: dict[str, Any] | None = None
+```
+
+```rust group=multi-261946e036f9 label=Rust
+struct ToolError {
+    error_type: String,
+    phase: String,
+    retryable: bool,
+    message: String,
+}
+
+struct SideEffect {
+    attempted: bool,
+    committed: Option<bool>,
+    summary: Option<String>,
+}
+
+struct Timing {
+    queued_ms: u64,
+    running_ms: u64,
+}
+
+struct ToolResult<T> {
+    call_id: String,
+    tool_version: String,
+    outcome: String,
+    data: Option<T>,
+    error: Option<ToolError>,
+    side_effect: SideEffect,
+    evidence: Vec<EvidenceItem>,
+    timing: Timing,
+    truncated: bool,
+}
+```
+
+```javascript group=multi-261946e036f9 label=JavaScript
+/**
+ * @template T
+ * @typedef {{
+ *   callId: string,
+ *   toolVersion: string,
+ *   outcome: 'succeeded'|'failed'|'partial'|'unknown'|'cancelled',
+ *   data?: T,
+ *   error?: {
+ *     type: string,
+ *     phase: 'resolve'|'validate'|'policy'|'execute'|'verify'|'commit',
+ *     retryable: boolean,
+ *     message: string
+ *   },
+ *   sideEffect: {
+ *     attempted: boolean,
+ *     committed: boolean|null,
+ *     summary?: string
+ *   },
+ *   evidence: EvidenceItem[],
+ *   timing: { queuedMs: number, runningMs: number },
+ *   truncated: boolean
+ * }} ToolResult
+ */
+```
+
+```typescript group=multi-261946e036f9 label=TypeScript
 type ToolResult<T> = {
   callId: string
   toolVersion: string
@@ -238,7 +389,98 @@ state.checkpointed
 
 ## 8. TypeScript 执行骨架
 
-```typescript
+```python group=multi-dede09f69678 label=Python
+async def execute_tool(request, runtime):
+    spec = runtime.registry.resolve(request.tool)
+    input_value = spec.input_schema.parse(request.arguments)
+    await runtime.policy.assert_allowed(spec, input_value, request)
+
+    prior = (
+        await runtime.executions.find_committed(request.idempotency_key)
+        if request.idempotency_key
+        else None
+    )
+    if prior is not None:
+        return prior.result
+
+    async with runtime.locks.lock(spec.lock_key(input_value, request)):
+        execution = await runtime.executions.begin(request, spec, input_value)
+        try:
+            raw = await spec.adapter.execute(
+                input_value,
+                deadline=request.deadline,
+                signal=runtime.cancellation.signal(request.cancellation_token),
+                emit=lambda event: runtime.events.append(execution.id, event),
+            )
+            result = await spec.normalize_and_verify(raw, input_value)
+        except Exception as error:
+            result = classify_execution_error(error, request, spec)
+        return await runtime.executions.commit(execution.id, result)
+```
+
+```rust group=multi-dede09f69678 label=Rust
+async fn execute_tool(
+    request: ToolExecutionRequest,
+    runtime: &Runtime,
+) -> Result<ToolResult<Value>, RuntimeError> {
+    let spec = runtime.registry.resolve(&request.tool)?;
+    let input = spec.input_schema.parse(&request.arguments)?;
+    runtime.policy.assert_allowed(spec, &input, &request).await?;
+
+    if let Some(key) = &request.idempotency_key {
+        if let Some(prior) = runtime.executions.find_committed(key).await? {
+            return Ok(prior.result);
+        }
+    }
+
+    runtime
+        .locks
+        .with_lock(spec.lock_key(&input, &request), || async {
+            let execution = runtime.executions.begin(&request, spec, &input).await?;
+            let result = match spec
+                .adapter
+                .execute(&input, request.deadline, &request.cancellation_token)
+                .await
+            {
+                Ok(raw) => spec.normalize_and_verify(raw, &input).await?,
+                Err(error) => classify_execution_error(error, &request, spec),
+            };
+            runtime.executions.commit(execution.id, result).await
+        })
+        .await
+}
+```
+
+```javascript group=multi-dede09f69678 label=JavaScript
+async function executeTool(request, runtime) {
+  const spec = runtime.registry.resolve(request.tool)
+  const input = spec.inputSchema.parse(request.arguments)
+  await runtime.policy.assertAllowed(spec, input, request)
+
+  const prior = request.idempotencyKey
+    ? await runtime.executions.findCommitted(request.idempotencyKey)
+    : null
+  if (prior) return prior.result
+
+  return runtime.locks.withLock(spec.lockKey(input, request), async () => {
+    const execution = await runtime.executions.begin(request, spec, input)
+    try {
+      const raw = await spec.adapter.execute(input, {
+        deadline: request.deadline,
+        signal: runtime.cancellation.signal(request.cancellationToken),
+        emit: (event) => runtime.events.append(execution.id, event),
+      })
+      const result = await spec.normalizeAndVerify(raw, input)
+      return runtime.executions.commit(execution.id, result)
+    } catch (error) {
+      const result = classifyExecutionError(error, request, spec)
+      return runtime.executions.commit(execution.id, result)
+    }
+  })
+}
+```
+
+```typescript group=multi-dede09f69678 label=TypeScript
 async function executeTool(
   request: ToolExecutionRequest,
   runtime: Runtime,

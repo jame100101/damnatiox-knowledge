@@ -197,8 +197,20 @@ flowchart TD
 
 本快照请求 loop 明确检查的是：
 
-```python
+```python group=multi-d30e5469d1c1 label=Python
 len(all_tokens) < request.max_len
+```
+
+```rust group=multi-d30e5469d1c1 label=Rust
+all_tokens.len() < request.max_len
+```
+
+```javascript group=multi-d30e5469d1c1 label=JavaScript
+allTokens.length < request.maxLen
+```
+
+```typescript group=multi-d30e5469d1c1 label=TypeScript
+allTokens.length < request.maxLen
 ```
 
 虽然 model config 有 `eos_token=2`，当前可见 `InferenceRunner.run()` 收集路径没有把 EOS 作为主要结束条件。将其封装成产品时应补：
@@ -220,11 +232,34 @@ len(all_tokens) < request.max_len
 
 `model.py` 中：
 
-```python
+```python group=multi-af9e2263a260 label=Python
 class KVMemory(NamedTuple):
     k: ...
     v: ...
     step: ...
+```
+
+```rust group=multi-af9e2263a260 label=Rust
+struct KvMemory<T> {
+    k: T,
+    v: T,
+    step: usize,
+}
+```
+
+```javascript group=multi-af9e2263a260 label=JavaScript
+/**
+ * @template T
+ * @typedef {{ k: T, v: T, step: number }} KvMemory
+ */
+```
+
+```typescript group=multi-af9e2263a260 label=TypeScript
+type KvMemory<T> = {
+  k: T
+  v: T
+  step: number
+}
 ```
 
 每一层保存：
@@ -252,9 +287,27 @@ class KVMemory(NamedTuple):
 
 `pad_to_size()`：
 
-```python
+```python group=multi-ab5589404bc1 label=Python
 if x.shape[0] > size:
     x = x[-size:]
+```
+
+```rust group=multi-ab5589404bc1 label=Rust
+if x.len() > size {
+    x = x[x.len() - size..].to_vec();
+}
+```
+
+```javascript group=multi-ab5589404bc1 label=JavaScript
+if (x.length > size) {
+  x = x.slice(-size)
+}
+```
+
+```typescript group=multi-ab5589404bc1 label=TypeScript
+if (x.length > size) {
+  x = x.slice(-size)
+}
 ```
 
 即保留末尾、左侧截断。它没有：
@@ -306,11 +359,36 @@ flowchart TD
 
 最低需要：
 
-```python
+```python group=multi-b286e80d16ab label=Python
 class ModelResponse:
     kind: Literal["tool_call", "final", "invalid"]
     tool_call: ToolCall | None
     content: str | None
+```
+
+```rust group=multi-b286e80d16ab label=Rust
+enum ModelResponse {
+    ToolCall { tool_call: ToolCall },
+    Final { content: String },
+    Invalid,
+}
+```
+
+```javascript group=multi-b286e80d16ab label=JavaScript
+/**
+ * @typedef {{
+ *   kind: 'tool_call'|'final'|'invalid',
+ *   toolCall?: ToolCall,
+ *   content?: string
+ * }} ModelResponse
+ */
+```
+
+```typescript group=multi-b286e80d16ab label=TypeScript
+type ModelResponse =
+  | { kind: 'tool_call'; toolCall: ToolCall }
+  | { kind: 'final'; content: string }
+  | { kind: 'invalid' }
 ```
 
 ### 5.3 纯 prompt JSON tool call 的风险
@@ -499,9 +577,27 @@ Layer 3：开放语义
 
 例如必须返回 `1, 2, 3`：
 
-```python
+```python group=multi-85edcc3f6bb7 label=Python
 def validate_exact_items(value: object) -> bool:
     return value == {"items": [1, 2, 3]}
+```
+
+```rust group=multi-85edcc3f6bb7 label=Rust
+fn validate_exact_items(value: &serde_json::Value) -> bool {
+    value == &serde_json::json!({ "items": [1, 2, 3] })
+}
+```
+
+```javascript group=multi-85edcc3f6bb7 label=JavaScript
+function validateExactItems(value) {
+  return JSON.stringify(value) === JSON.stringify({ items: [1, 2, 3] })
+}
+```
+
+```typescript group=multi-85edcc3f6bb7 label=TypeScript
+function validateExactItems(value: unknown): boolean {
+  return JSON.stringify(value) === JSON.stringify({ items: [1, 2, 3] })
+}
 ```
 
 先用代码检查。只有“内容正确性”难以用代码判断时，再调用第二个 LLM。

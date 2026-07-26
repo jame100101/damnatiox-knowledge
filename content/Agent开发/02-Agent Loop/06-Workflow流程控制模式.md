@@ -118,7 +118,49 @@ flowchart TD
 
 ### 4.1 RouteDecision 契约
 
-```typescript
+```python group=multi-11eae16ee4ba label=Python
+from dataclasses import dataclass
+from typing import Literal
+
+@dataclass(frozen=True)
+class RouteDecision:
+    route: Literal["billing", "technical", "account", "needs_clarification"]
+    confidence: float
+    reason_codes: tuple[str, ...]
+    required_capabilities: tuple[str, ...]
+    input_version: str
+```
+
+```rust group=multi-11eae16ee4ba label=Rust
+enum Route {
+    Billing,
+    Technical,
+    Account,
+    NeedsClarification,
+}
+
+struct RouteDecision {
+    route: Route,
+    confidence: f64,
+    reason_codes: Vec<String>,
+    required_capabilities: Vec<String>,
+    input_version: String,
+}
+```
+
+```javascript group=multi-11eae16ee4ba label=JavaScript
+/**
+ * @typedef {{
+ *   route: 'billing'|'technical'|'account'|'needs_clarification',
+ *   confidence: number,
+ *   reasonCodes: string[],
+ *   requiredCapabilities: string[],
+ *   inputVersion: string
+ * }} RouteDecision
+ */
+```
+
+```typescript group=multi-11eae16ee4ba label=TypeScript
 type RouteDecision = {
   route: 'billing' | 'technical' | 'account' | 'needs_clarification'
   confidence: number
@@ -222,7 +264,59 @@ flowchart TD
 
 ### 6.1 WorkerTask 契约
 
-```typescript
+```python group=multi-6fb7cfc21167 label=Python
+from dataclasses import dataclass
+
+@dataclass(frozen=True)
+class WorkerTask:
+    id: str
+    objective: str
+    depends_on: tuple[str, ...]
+    input_refs: tuple[str, ...]
+    expected_output_schema: str
+    acceptance_criteria: tuple[str, ...]
+    allowed_tools: tuple[str, ...]
+    read_scopes: tuple[str, ...]
+    write_scopes: tuple[str, ...]
+    timeout_ms: int
+    max_attempts: int
+```
+
+```rust group=multi-6fb7cfc21167 label=Rust
+struct WorkerTask {
+    id: String,
+    objective: String,
+    depends_on: Vec<String>,
+    input_refs: Vec<String>,
+    expected_output_schema: String,
+    acceptance_criteria: Vec<String>,
+    allowed_tools: Vec<String>,
+    read_scopes: Vec<String>,
+    write_scopes: Vec<String>,
+    timeout_ms: u64,
+    max_attempts: u32,
+}
+```
+
+```javascript group=multi-6fb7cfc21167 label=JavaScript
+/**
+ * @typedef {{
+ *   id: string,
+ *   objective: string,
+ *   dependsOn: string[],
+ *   inputRefs: string[],
+ *   expectedOutputSchema: string,
+ *   acceptanceCriteria: string[],
+ *   allowedTools: string[],
+ *   readScopes: string[],
+ *   writeScopes: string[],
+ *   timeoutMs: number,
+ *   maxAttempts: number
+ * }} WorkerTask
+ */
+```
+
+```typescript group=multi-6fb7cfc21167 label=TypeScript
 type WorkerTask = {
   id: string
   objective: string
@@ -281,7 +375,83 @@ flowchart TD
 
 ### 7.1 Evaluation 契约
 
-```typescript
+```python group=multi-0f734b37ce46 label=Python
+from dataclasses import dataclass
+from typing import Literal
+
+@dataclass(frozen=True)
+class CriterionResult:
+    criterion_id: str
+    passed: bool
+    evidence_refs: tuple[str, ...]
+    score: float | None = None
+    issue_code: str | None = None
+
+@dataclass(frozen=True)
+class RepairInstruction:
+    target: str
+    issue_code: str
+    expected_change: str
+
+@dataclass(frozen=True)
+class Evaluation:
+    verdict: Literal["pass", "repair", "terminal"]
+    criterion_results: tuple[CriterionResult, ...]
+    repair_instructions: tuple[RepairInstruction, ...]
+    evaluator_version: str
+```
+
+```rust group=multi-0f734b37ce46 label=Rust
+enum Verdict {
+    Pass,
+    Repair,
+    Terminal,
+}
+
+struct CriterionResult {
+    criterion_id: String,
+    passed: bool,
+    score: Option<f64>,
+    evidence_refs: Vec<String>,
+    issue_code: Option<String>,
+}
+
+struct RepairInstruction {
+    target: String,
+    issue_code: String,
+    expected_change: String,
+}
+
+struct Evaluation {
+    verdict: Verdict,
+    criterion_results: Vec<CriterionResult>,
+    repair_instructions: Vec<RepairInstruction>,
+    evaluator_version: String,
+}
+```
+
+```javascript group=multi-0f734b37ce46 label=JavaScript
+/**
+ * @typedef {{
+ *   verdict: 'pass'|'repair'|'terminal',
+ *   criterionResults: Array<{
+ *     criterionId: string,
+ *     passed: boolean,
+ *     score?: number,
+ *     evidenceRefs: string[],
+ *     issueCode?: string
+ *   }>,
+ *   repairInstructions: Array<{
+ *     target: string,
+ *     issueCode: string,
+ *     expectedChange: string
+ *   }>,
+ *   evaluatorVersion: string
+ * }} Evaluation
+ */
+```
+
+```typescript group=multi-0f734b37ce46 label=TypeScript
 type Evaluation = {
   verdict: 'pass' | 'repair' | 'terminal'
   criterionResults: Array<{
@@ -464,6 +634,72 @@ class WorkflowState:
     stop: dict[str, Any] | None = None
 ```
 
+```rust group=workflow-state label=Rust
+struct ArtifactVersion {
+    id: String,
+    version: String,
+    schema_id: Option<String>,
+    digest: Option<String>,
+}
+
+struct WorkflowBudget {
+    remaining_turns: u32,
+    remaining_tool_calls: u32,
+    remaining_cost_usd: Option<f64>,
+    deadline: String,
+}
+
+struct StopState {
+    reason: StopReason,
+    evidence_refs: Vec<String>,
+}
+
+struct WorkflowState {
+    run_id: String,
+    workflow_id: String,
+    workflow_version: String,
+    phase: String,
+    input_refs: Vec<String>,
+    active_plan_version: Option<u32>,
+    active_task_ids: Vec<String>,
+    route_history: Vec<RouteDecision>,
+    artifacts: Vec<ArtifactVersion>,
+    budgets: WorkflowBudget,
+    stop: Option<StopState>,
+}
+```
+
+```javascript group=workflow-state label=JavaScript
+/**
+ * @typedef {{
+ *   runId: string,
+ *   workflowId: string,
+ *   workflowVersion: string,
+ *   phase: string,
+ *   inputRefs: string[],
+ *   activePlanVersion?: number,
+ *   activeTaskIds: string[],
+ *   routeHistory: RouteDecision[],
+ *   artifacts: Array<{
+ *     id: string,
+ *     version: string,
+ *     schemaId?: string,
+ *     digest?: string
+ *   }>,
+ *   budgets: {
+ *     remainingTurns: number,
+ *     remainingToolCalls: number,
+ *     remainingCostUsd?: number,
+ *     deadline: string
+ *   },
+ *   stop?: {
+ *     reason: 'completed'|'cancelled'|'deadline'|'budget'|'terminal_error',
+ *     evidenceRefs: string[]
+ *   }
+ * }} WorkflowState
+ */
+```
+
 状态中保存 artifact ref，而非把所有大文本无限累积在一个对象中。Context Builder 根据当前节点需要选择内容，Runner 仍保留完整证据与状态历史。
 
 ---
@@ -552,6 +788,83 @@ async function generateWithReview<T>(
   return {
     status: 'partial',
     value: best,
+    stopReason: 'MAX_REVIEW_ROUNDS',
+  }
+}
+```
+
+```rust group=evaluator-loop label=Rust
+struct Review {
+    verdict: Verdict,
+    score: f64,
+    issues: Vec<String>,
+}
+
+async fn generate_with_review<T, G, E>(
+    spec: &Spec,
+    generator: G,
+    evaluator: E,
+    max_rounds: usize,
+) -> Result<ReviewResult<T>, ReviewError>
+where
+    T: Clone,
+    G: AsyncGenerator<T>,
+    E: AsyncEvaluator<T>,
+{
+    let mut candidate = generator.generate(spec, None, &[]).await?;
+    let mut best = candidate.clone();
+    let mut best_score = f64::NEG_INFINITY;
+
+    for _ in 0..max_rounds {
+        let review = evaluator.evaluate(spec, &candidate).await?;
+        if review.score > best_score {
+            best = candidate.clone();
+            best_score = review.score;
+        }
+        match review.verdict {
+            Verdict::Pass => return Ok(ReviewResult::Completed(candidate, review)),
+            Verdict::Terminal => break,
+            Verdict::Repair => {
+                candidate = generator
+                    .generate(spec, Some(&candidate), &review.issues)
+                    .await?;
+            }
+        }
+    }
+    Ok(ReviewResult::Partial {
+        value: best,
+        score: best_score,
+        stop_reason: "MAX_REVIEW_ROUNDS",
+    })
+}
+```
+
+```javascript group=evaluator-loop label=JavaScript
+async function generateWithReview(spec, generator, evaluator, maxRounds = 3) {
+  let candidate = await generator({ spec, issues: [] })
+  let best = candidate
+  let bestScore = Number.NEGATIVE_INFINITY
+
+  for (let round = 0; round < maxRounds; round += 1) {
+    const review = await evaluator({ spec, candidate })
+    if (review.score > bestScore) {
+      best = candidate
+      bestScore = review.score
+    }
+    if (review.verdict === 'pass') {
+      return { status: 'completed', value: candidate, review }
+    }
+    if (review.verdict === 'terminal') break
+    candidate = await generator({
+      spec,
+      previous: candidate,
+      issues: review.issues,
+    })
+  }
+  return {
+    status: 'partial',
+    value: best,
+    score: bestScore,
     stopReason: 'MAX_REVIEW_ROUNDS',
   }
 }

@@ -154,6 +154,76 @@ class FinalDecision:
 ParsedDecision = ToolDecision | FinalDecision
 ```
 
+```rust group=normalized-output label=Rust
+use serde_json::Value;
+
+struct RawProviderEvent {
+    provider: String,
+    response_id: String,
+    sequence: u64,
+    event_type: String,
+    payload: Value,
+}
+
+enum NormalizedContent {
+    Text { item_id: String, text: String },
+    ToolCall {
+        item_id: String,
+        call_id: String,
+        name: String,
+        arguments_json: String,
+    },
+    Structured {
+        item_id: String,
+        value: Value,
+        schema_id: String,
+    },
+}
+
+struct NormalizedResponse {
+    provider: String,
+    response_id: String,
+    model: String,
+    items: Vec<NormalizedContent>,
+    finish_reason: FinishReason,
+    usage: Option<Usage>,
+}
+
+enum ParsedDecision<T> {
+    Tool { calls: Vec<ToolCall> },
+    Final { value: T },
+}
+```
+
+```javascript group=normalized-output label=JavaScript
+/**
+ * @typedef {{
+ *   provider: string,
+ *   responseId: string,
+ *   sequence: number,
+ *   type: string,
+ *   payload: unknown
+ * }} RawProviderEvent
+ *
+ * @typedef (
+ *   { kind: 'text', itemId: string, text: string } |
+ *   { kind: 'tool_call', itemId: string, callId: string,
+ *     name: string, argumentsJson: string } |
+ *   { kind: 'structured', itemId: string, value: unknown, schemaId: string }
+ * ) NormalizedContent
+ *
+ * @typedef {{
+ *   provider: string,
+ *   responseId: string,
+ *   model: string,
+ *   items: NormalizedContent[],
+ *   finishReason: 'stop'|'tool_calls'|'length'|'content_filter'|
+ *     'cancelled'|'error'|'unknown',
+ *   usage?: { inputTokens?: number, outputTokens?: number }
+ * }} NormalizedResponse
+ */
+```
+
 内部对象应保留 provider 的 `responseId`、`itemId` 和 `callId`，以便把 ToolResult 精确关联到原调用，也便于 trace、重放和乱序事件诊断。
 
 ---
@@ -353,7 +423,53 @@ response_end
 
 ### 6.1 Stream Assembler 状态
 
-```typescript
+```python group=multi-966cdd0bc796 label=Python
+from dataclasses import dataclass, field
+
+@dataclass
+class PartialToolCall:
+    item_id: str
+    argument_chunks: list[str] = field(default_factory=list)
+    started: bool = False
+    ended: bool = False
+    first_sequence: int = -1
+    last_sequence: int = -1
+    byte_length: int = 0
+    call_id: str | None = None
+    name: str | None = None
+```
+
+```rust group=multi-966cdd0bc796 label=Rust
+struct PartialToolCall {
+    item_id: String,
+    call_id: Option<String>,
+    name: Option<String>,
+    argument_chunks: Vec<String>,
+    started: bool,
+    ended: bool,
+    first_sequence: u64,
+    last_sequence: u64,
+    byte_length: usize,
+}
+```
+
+```javascript group=multi-966cdd0bc796 label=JavaScript
+/**
+ * @typedef {{
+ *   itemId: string,
+ *   callId?: string,
+ *   name?: string,
+ *   argumentChunks: string[],
+ *   started: boolean,
+ *   ended: boolean,
+ *   firstSequence: number,
+ *   lastSequence: number,
+ *   byteLength: number
+ * }} PartialToolCall
+ */
+```
+
+```typescript group=multi-966cdd0bc796 label=TypeScript
 type PartialToolCall = {
   itemId: string
   callId?: string
@@ -562,6 +678,137 @@ def assemble_tool_calls(events, max_bytes_per_call=64 * 1024):
     return result
 ```
 
+```rust group=stream-assembler label=Rust
+use std::collections::{HashMap, HashSet};
+
+struct PartialCall {
+    call_id: String,
+    name: String,
+    chunks: Vec<String>,
+    bytes_seen: usize,
+    ended: bool,
+}
+
+fn assemble_tool_calls(
+    events: &[ToolStreamEvent],
+    max_bytes_per_call: usize,
+) -> Result<Vec<AssembledToolCall>, StreamProtocolError> {
+    let mut items: HashMap<String, PartialCall> = HashMap::new();
+    let mut call_ids = HashSet::new();
+    let mut previous_sequence = None;
+
+    for event in events {
+        if previous_sequence.is_some_and(|value| event.sequence() <= value) {
+            return Err(StreamProtocolError::NonMonotonicSequence);
+        }
+        previous_sequence = Some(event.sequence());
+
+        match event {
+            ToolStreamEvent::Start { item_id, call_id, name, .. } => {
+                if items.contains_key(item_id) || !call_ids.insert(call_id.clone()) {
+                    return Err(StreamProtocolError::DuplicateCallId(call_id.clone()));
+                }
+                items.insert(
+                    item_id.clone(),
+                    PartialCall {
+                        call_id: call_id.clone(),
+                        name: name.clone(),
+                        chunks: Vec::new(),
+                        bytes_seen: 0,
+                        ended: false,
+                    },
+                );
+            }
+            ToolStreamEvent::Delta { item_id, delta, .. } => {
+                let item = items
+                    .get_mut(item_id)
+                    .ok_or_else(|| StreamProtocolError::UnknownItem(item_id.clone()))?;
+                if item.ended {
+                    return Err(StreamProtocolError::DeltaAfterEnd(item_id.clone()));
+                }
+                item.bytes_seen += delta.len();
+                if item.bytes_seen > max_bytes_per_call {
+                    return Err(StreamProtocolError::ArgumentsTooLarge(item_id.clone()));
+                }
+                item.chunks.push(delta.clone());
+            }
+            ToolStreamEvent::End { item_id, .. } => {
+                items
+                    .get_mut(item_id)
+                    .ok_or_else(|| StreamProtocolError::UnknownItem(item_id.clone()))?
+                    .ended = true;
+            }
+        }
+    }
+
+    items
+        .into_values()
+        .map(|item| {
+            if !item.ended {
+                return Err(StreamProtocolError::IncompleteToolCall(item.call_id));
+            }
+            Ok(AssembledToolCall {
+                call_id: item.call_id,
+                name: item.name,
+                arguments_json: item.chunks.concat(),
+            })
+        })
+        .collect()
+}
+```
+
+```javascript group=stream-assembler label=JavaScript
+function assembleToolCalls(events, maxBytesPerCall = 64 * 1024) {
+  const items = new Map()
+  const callIds = new Set()
+  let previousSequence = -1
+
+  for (const event of events) {
+    if (event.sequence <= previousSequence) {
+      throw new StreamProtocolError('NON_MONOTONIC_SEQUENCE')
+    }
+    previousSequence = event.sequence
+
+    if (event.type === 'tool_start') {
+      if (items.has(event.itemId) || callIds.has(event.callId)) {
+        throw new StreamProtocolError('DUPLICATE_CALL_ID')
+      }
+      items.set(event.itemId, {
+        callId: event.callId,
+        name: event.name,
+        chunks: [],
+        bytes: 0,
+        ended: false,
+      })
+      callIds.add(event.callId)
+      continue
+    }
+
+    const item = items.get(event.itemId)
+    if (!item) throw new StreamProtocolError('UNKNOWN_STREAM_ITEM')
+    if (event.type === 'tool_arguments_delta') {
+      if (item.ended) throw new StreamProtocolError('DELTA_AFTER_END')
+      item.bytes += new TextEncoder().encode(event.delta).byteLength
+      if (item.bytes > maxBytesPerCall) {
+        throw new StreamProtocolError('ARGUMENTS_TOO_LARGE')
+      }
+      item.chunks.push(event.delta)
+    } else {
+      item.ended = true
+    }
+  }
+
+  return [...items.values()].map((item) => {
+    if (!item.ended) throw new StreamProtocolError('INCOMPLETE_TOOL_CALL')
+    return {
+      callId: item.callId,
+      name: item.name,
+      argumentsJson: item.chunks.join(''),
+    }
+  })
+}
+```
+
 实际 provider 可能保证事件顺序，也可能由 SDK 完成部分组装。内部 adapter 仍应通过 fixture 测试对应保证，并对取消、断线和 SDK 升级做回归。
 
 ---
@@ -655,6 +902,37 @@ enum Decision {
 
 fn parse_decision_json(raw: &str) -> Result<Decision, serde_json::Error> {
     serde_json::from_str(raw)
+}
+```
+
+```javascript group=decision-parser label=JavaScript
+import { z } from 'zod'
+
+const ToolCall = z
+  .object({
+    callId: z.string().min(1).max(128),
+    name: z.string().min(1).max(128),
+    arguments: z.record(z.string(), z.unknown()),
+  })
+  .strict()
+
+const Decision = z.discriminatedUnion('kind', [
+  z
+    .object({
+      kind: z.literal('tool'),
+      calls: z.array(ToolCall).min(1).max(4),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('final'),
+      answer: z.string().min(1).max(32_000),
+    })
+    .strict(),
+])
+
+export function parseDecisionJson(raw) {
+  return Decision.parse(JSON.parse(raw))
 }
 ```
 
@@ -778,7 +1056,48 @@ Parser 可以解析任意字符串工具名；Domain Validator 根据当前注�
 
 ### 10.1 错误分层
 
-```typescript
+```python group=multi-2c0c21d76e4f label=Python
+from dataclasses import dataclass, field
+from typing import Literal
+
+@dataclass(frozen=True)
+class OutputError:
+    layer: Literal["transport", "stream", "parse", "schema", "domain"]
+    code: str
+    retryable: bool
+    offset: int | None = None
+    issues: tuple[dict[str, str], ...] = ()
+```
+
+```rust group=multi-2c0c21d76e4f label=Rust
+enum OutputError {
+    Transport { code: String, retryable: bool },
+    Stream { code: String, retryable: bool },
+    Parse { code: String, offset: Option<usize>, retryable: bool },
+    Schema { issues: Vec<SchemaIssue>, retryable: bool },
+    Domain { code: String, retryable: bool },
+}
+
+struct SchemaIssue {
+    path: String,
+    code: String,
+    expected: Option<String>,
+}
+```
+
+```javascript group=multi-2c0c21d76e4f label=JavaScript
+/**
+ * @typedef {{
+ *   layer: 'transport'|'stream'|'parse'|'schema'|'domain',
+ *   code: string,
+ *   retryable: boolean,
+ *   offset?: number,
+ *   issues?: Array<{ path: string, code: string, expected?: string }>
+ * }} OutputError
+ */
+```
+
+```typescript group=multi-2c0c21d76e4f label=TypeScript
 type OutputError =
   | {
       layer: 'transport'
@@ -866,7 +1185,44 @@ v2: {"kind":"tool","calls":[{"name":"search","arguments":{...}}]}
 7. provider 错误分类；
 8. 能力声明。
 
-```typescript
+```python group=multi-539b25c29d3f label=Python
+from dataclasses import dataclass
+
+@dataclass(frozen=True)
+class ProviderCapabilities:
+    native_structured_output: bool
+    strict_json_schema: bool
+    parallel_tool_calls: bool
+    streaming_tool_arguments: bool
+    supported_schema_keywords: tuple[str, ...]
+    max_tools: int | None = None
+```
+
+```rust group=multi-539b25c29d3f label=Rust
+struct ProviderCapabilities {
+    native_structured_output: bool,
+    strict_json_schema: bool,
+    parallel_tool_calls: bool,
+    streaming_tool_arguments: bool,
+    supported_schema_keywords: Vec<String>,
+    max_tools: Option<usize>,
+}
+```
+
+```javascript group=multi-539b25c29d3f label=JavaScript
+/**
+ * @typedef {{
+ *   nativeStructuredOutput: boolean,
+ *   strictJsonSchema: boolean,
+ *   parallelToolCalls: boolean,
+ *   streamingToolArguments: boolean,
+ *   supportedSchemaKeywords: string[],
+ *   maxTools?: number
+ * }} ProviderCapabilities
+ */
+```
+
+```typescript group=multi-539b25c29d3f label=TypeScript
 type ProviderCapabilities = {
   nativeStructuredOutput: boolean
   strictJsonSchema: boolean

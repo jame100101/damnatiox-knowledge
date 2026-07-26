@@ -2,7 +2,63 @@
 
 ## 1. Trace 的最小字段
 
-```ts
+```python group=multi-ea046a61e0c3 label=Python
+from dataclasses import dataclass, field
+from typing import Any
+
+@dataclass(frozen=True)
+class TraceEvent:
+    trace_id: str
+    span_id: str
+    thread_id: str
+    run_id: str
+    event_type: str
+    started_at: str
+    status: str
+    attributes: dict[str, Any] = field(default_factory=dict)
+    parent_span_id: str | None = None
+    turn_id: str | None = None
+    duration_ms: int | None = None
+```
+
+```rust group=multi-ea046a61e0c3 label=Rust
+use std::collections::HashMap;
+use serde_json::Value;
+
+struct TraceEvent {
+    trace_id: String,
+    span_id: String,
+    parent_span_id: Option<String>,
+    thread_id: String,
+    run_id: String,
+    turn_id: Option<String>,
+    event_type: String,
+    started_at: String,
+    duration_ms: Option<u64>,
+    status: String,
+    attributes: HashMap<String, Value>,
+}
+```
+
+```javascript group=multi-ea046a61e0c3 label=JavaScript
+/**
+ * @typedef {{
+ *   traceId: string,
+ *   spanId: string,
+ *   parentSpanId?: string,
+ *   threadId: string,
+ *   runId: string,
+ *   turnId?: string,
+ *   eventType: string,
+ *   startedAt: string,
+ *   durationMs?: number,
+ *   status: string,
+ *   attributes: Record<string, unknown>
+ * }} TraceEvent
+ */
+```
+
+```typescript group=multi-ea046a61e0c3 label=TypeScript
 type TraceEvent = {
   traceId: string
   spanId: string

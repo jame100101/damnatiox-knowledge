@@ -39,7 +39,50 @@ flowchart TB
 
 入口把 Web、CLI、API 或消息平台输入规范化为：
 
-```ts
+```python group=multi-a302c2242cf9 label=Python
+from dataclasses import dataclass
+
+@dataclass(frozen=True)
+class RunInput:
+    run_id: str
+    user_id: str
+    workspace_id: str
+    locale: str
+    request: tuple["MessageBlock", ...]
+    attachments: tuple["ArtifactRef", ...]
+    deadline: int
+    budget: "Budget"
+```
+
+```rust group=multi-a302c2242cf9 label=Rust
+struct RunInput {
+    run_id: String,
+    user_id: String,
+    workspace_id: String,
+    locale: String,
+    request: Vec<MessageBlock>,
+    attachments: Vec<ArtifactRef>,
+    deadline: u64,
+    budget: Budget,
+}
+```
+
+```javascript group=multi-a302c2242cf9 label=JavaScript
+/**
+ * @typedef {{
+ *   runId: string,
+ *   userId: string,
+ *   workspaceId: string,
+ *   locale: string,
+ *   request: MessageBlock[],
+ *   attachments: ArtifactRef[],
+ *   deadline: number,
+ *   budget: Budget
+ * }} RunInput
+ */
+```
+
+```typescript group=multi-a302c2242cf9 label=TypeScript
 type RunInput = {
   runId: string
   userId: string
@@ -252,7 +295,55 @@ Memory 写入是经过策略筛选的派生动作，不是把整个 trace 永久
 
 用户可在运行中接收进度事件，但最终响应只声明已验证状态。建议结构：
 
-```ts
+```python group=multi-3c6614324adc label=Python
+from dataclasses import dataclass
+from typing import Literal
+
+@dataclass(frozen=True)
+class RunResult:
+    outcome: Literal["completed", "partial", "failed", "cancelled"]
+    final_output: tuple["MessageBlock", ...]
+    deliverables: tuple["ArtifactRef", ...]
+    validation: tuple["ValidationResult", ...]
+    unresolved: tuple["UnresolvedItem", ...]
+    usage: "UsageSummary"
+    trace_ref: str
+```
+
+```rust group=multi-3c6614324adc label=Rust
+enum RunOutcome {
+    Completed,
+    Partial,
+    Failed,
+    Cancelled,
+}
+
+struct RunResult {
+    outcome: RunOutcome,
+    final_output: Vec<MessageBlock>,
+    deliverables: Vec<ArtifactRef>,
+    validation: Vec<ValidationResult>,
+    unresolved: Vec<UnresolvedItem>,
+    usage: UsageSummary,
+    trace_ref: String,
+}
+```
+
+```javascript group=multi-3c6614324adc label=JavaScript
+/**
+ * @typedef {{
+ *   outcome: 'completed'|'partial'|'failed'|'cancelled',
+ *   finalOutput: MessageBlock[],
+ *   deliverables: ArtifactRef[],
+ *   validation: ValidationResult[],
+ *   unresolved: UnresolvedItem[],
+ *   usage: UsageSummary,
+ *   traceRef: string
+ * }} RunResult
+ */
+```
+
+```typescript group=multi-3c6614324adc label=TypeScript
 type RunResult = {
   outcome: 'completed' | 'partial' | 'failed' | 'cancelled'
   finalOutput: MessageBlock[]

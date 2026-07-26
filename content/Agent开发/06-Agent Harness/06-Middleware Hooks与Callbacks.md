@@ -42,7 +42,59 @@ flowchart TB
 
 ## 3. Middleware 契约
 
-```ts
+```python group=multi-452b3f261fcf label=Python
+from typing import Awaitable, Callable, Generic, Protocol, TypeVar
+
+I = TypeVar("I")
+O = TypeVar("O")
+Next = Callable[[I], Awaitable[O]]
+
+class Middleware(Protocol, Generic[I, O]):
+    name: str
+    order: int
+
+    async def handle(
+        self,
+        input_value: I,
+        context: "HookContext",
+        next_call: Next[I, O],
+    ) -> O: ...
+```
+
+```rust group=multi-452b3f261fcf label=Rust
+use std::{future::Future, pin::Pin};
+
+type Next<'a, I, O> = Box<
+    dyn FnOnce(I) -> Pin<Box<dyn Future<Output = O> + Send + 'a>> + Send + 'a,
+>;
+
+trait Middleware<I, O> {
+    fn name(&self) -> &str;
+    fn order(&self) -> i32;
+    fn handle<'a>(
+        &'a self,
+        input: I,
+        context: &'a HookContext,
+        next: Next<'a, I, O>,
+    ) -> Pin<Box<dyn Future<Output = O> + Send + 'a>>;
+}
+```
+
+```javascript group=multi-452b3f261fcf label=JavaScript
+/**
+ * @template I, O
+ * @typedef {(input: I) => Promise<O>} Next
+ *
+ * @template I, O
+ * @typedef {{
+ *   name: string,
+ *   order: number,
+ *   handle(input: I, context: HookContext, next: Next<I, O>): Promise<O>
+ * }} Middleware
+ */
+```
+
+```typescript group=multi-452b3f261fcf label=TypeScript
 type Next<I, O> = (input: I) => Promise<O>
 
 interface Middleware<I, O> {
@@ -97,7 +149,42 @@ Hook 直接修改全局 `state` 会导致：
 
 更清晰的方式是返回 typed patch：
 
-```ts
+```python group=multi-d34ec94bfdd3 label=Python
+from dataclasses import dataclass, field
+from typing import Any
+
+@dataclass(frozen=True)
+class StatePatch:
+    set_values: dict[str, Any] = field(default_factory=dict)
+    append_events: tuple["RuntimeEvent", ...] = ()
+    add_context_fragments: tuple["ContextFragment", ...] = ()
+    remove_context_fragment_ids: tuple[str, ...] = ()
+```
+
+```rust group=multi-d34ec94bfdd3 label=Rust
+use std::collections::HashMap;
+use serde_json::Value;
+
+struct StatePatch {
+    set_values: HashMap<String, Value>,
+    append_events: Vec<RuntimeEvent>,
+    add_context_fragments: Vec<ContextFragment>,
+    remove_context_fragment_ids: Vec<String>,
+}
+```
+
+```javascript group=multi-d34ec94bfdd3 label=JavaScript
+/**
+ * @typedef {{
+ *   set?: Record<string, unknown>,
+ *   appendEvents?: RuntimeEvent[],
+ *   addContextFragments?: ContextFragment[],
+ *   removeContextFragmentIds?: string[]
+ * }} StatePatch
+ */
+```
+
+```typescript group=multi-d34ec94bfdd3 label=TypeScript
 type StatePatch = {
   set?: Record<string, unknown>
   appendEvents?: RuntimeEvent[]
@@ -112,7 +199,47 @@ Runtime 检查 patch 权限、版本与冲突，再通过 reducer 提交。每�
 
 不要用 `undefined` 同时表示“继续”“没有结果”和“拒绝”。可使用：
 
-```ts
+```python group=multi-afd9a42c26a1 label=Python
+from dataclasses import dataclass
+from typing import Any, Literal
+
+@dataclass(frozen=True)
+class HookDecision:
+    kind: Literal["continue", "replace", "pause", "stop"]
+    patch: "StatePatch | None" = None
+    value: Any | None = None
+    reason: str | None = None
+    resume_token: str | None = None
+    outcome: Literal["failed", "cancelled"] | None = None
+```
+
+```rust group=multi-afd9a42c26a1 label=Rust
+enum HookDecision<T> {
+    Continue { patch: Option<StatePatch> },
+    Replace { value: T, reason: String },
+    Pause { resume_token: String, reason: String },
+    Stop { outcome: StopOutcome, reason: String },
+}
+
+enum StopOutcome {
+    Failed,
+    Cancelled,
+}
+```
+
+```javascript group=multi-afd9a42c26a1 label=JavaScript
+/**
+ * @template T
+ * @typedef (
+ *   { kind: 'continue', patch?: StatePatch } |
+ *   { kind: 'replace', value: T, reason: string } |
+ *   { kind: 'pause', resumeToken: string, reason: string } |
+ *   { kind: 'stop', outcome: 'failed'|'cancelled', reason: string }
+ * ) HookDecision
+ */
+```
+
+```typescript group=multi-afd9a42c26a1 label=TypeScript
 type HookDecision<T> =
   | { kind: 'continue'; patch?: StatePatch }
   | { kind: 'replace'; value: T; reason: string }
@@ -172,7 +299,101 @@ Hook 异常至少分为：
 
 ## 10. TypeScript 示例：可观察的模型调用链
 
-```typescript
+```python group=multi-82083ef4d7f7 label=Python
+from dataclasses import dataclass
+from typing import Any
+
+@dataclass(frozen=True)
+class ModelCall:
+    request_id: str
+    messages: list[Any]
+
+@dataclass(frozen=True)
+class ModelResult:
+    raw: Any
+    usage: dict[str, int]
+
+class TraceMiddleware:
+    name = "trace"
+    order = 10
+
+    async def handle(self, input_value, context, next_call):
+        span = context.trace.start(
+            "model.call",
+            request_id=input_value.request_id,
+            input_hash=hash_messages(input_value.messages),
+        )
+        try:
+            result = await next_call(input_value)
+            span.end(usage=result.usage)
+            return result
+        except Exception as error:
+            span.end(error=classify(error))
+            raise
+```
+
+```rust group=multi-82083ef4d7f7 label=Rust
+struct ModelCall {
+    request_id: String,
+    messages: Vec<Message>,
+}
+
+struct ModelResult {
+    raw: serde_json::Value,
+    usage: Usage,
+}
+
+struct TraceMiddleware;
+
+impl Middleware<ModelCall, Result<ModelResult, ModelError>> for TraceMiddleware {
+    fn name(&self) -> &str { "trace" }
+    fn order(&self) -> i32 { 10 }
+
+    fn handle<'a>(
+        &'a self,
+        input: ModelCall,
+        context: &'a HookContext,
+        next: Next<'a, ModelCall, Result<ModelResult, ModelError>>,
+    ) -> BoxFuture<'a, Result<ModelResult, ModelError>> {
+        Box::pin(async move {
+            let mut span = context.trace.start("model.call", &input.request_id);
+            match next(input).await {
+                Ok(result) => {
+                    span.end_with_usage(&result.usage);
+                    Ok(result)
+                }
+                Err(error) => {
+                    span.end_with_error(&error);
+                    Err(error)
+                }
+            }
+        })
+    }
+}
+```
+
+```javascript group=multi-82083ef4d7f7 label=JavaScript
+const traceMiddleware = {
+  name: 'trace',
+  order: 10,
+  async handle(input, context, next) {
+    const span = context.trace.start('model.call', {
+      requestId: input.requestId,
+      inputHash: hash(input.messages),
+    })
+    try {
+      const result = await next(input)
+      span.end({ usage: result.usage })
+      return result
+    } catch (error) {
+      span.end({ error: classify(error) })
+      throw error
+    }
+  },
+}
+```
+
+```typescript group=multi-82083ef4d7f7 label=TypeScript
 type ModelCall = { requestId: string; messages: unknown[] }
 type ModelResult = { raw: unknown; usage: { input: number; output: number } }
 

@@ -123,7 +123,40 @@ ready(t) =
 
 下游对上游的接受策略可分为：
 
-```typescript
+```python group=multi-000b9fb76281 label=Python
+from dataclasses import dataclass
+from typing import Literal
+
+@dataclass(frozen=True)
+class DependencyPolicy:
+    kind: Literal[
+        "require_success", "allow_partial", "always_run", "condition"
+    ]
+    required_artifacts: tuple[str, ...] = ()
+    predicate_id: str | None = None
+```
+
+```rust group=multi-000b9fb76281 label=Rust
+enum DependencyPolicy {
+    RequireSuccess,
+    AllowPartial { required_artifacts: Vec<String> },
+    AlwaysRun,
+    Condition { predicate_id: String },
+}
+```
+
+```javascript group=multi-000b9fb76281 label=JavaScript
+/**
+ * @typedef (
+ *   { kind: 'require_success' } |
+ *   { kind: 'allow_partial', requiredArtifacts: string[] } |
+ *   { kind: 'always_run' } |
+ *   { kind: 'condition', predicateId: string }
+ * ) DependencyPolicy
+ */
+```
+
+```typescript group=multi-000b9fb76281 label=TypeScript
 type DependencyPolicy =
   | { kind: 'require_success' }
   | { kind: 'allow_partial'; requiredArtifacts: string[] }
@@ -253,6 +286,88 @@ class DispatchDecision:
     input_refs: tuple[str, ...]
 ```
 
+```rust group=scheduler-contract label=Rust
+enum ResourceClaim {
+    ConcurrencySlot { pool: String, units: u32 },
+    ReadScope { scope: String },
+    WriteScope { scope: String },
+    RateLimit { bucket: String, tokens: u32 },
+}
+
+struct TaskLease {
+    lease_id: String,
+    run_id: String,
+    task_id: String,
+    plan_version: u32,
+    attempt: u32,
+    worker_id: String,
+    issued_at: String,
+    expires_at: String,
+    heartbeat_every_ms: u64,
+}
+
+struct DispatchDecision {
+    task_id: String,
+    plan_version: u32,
+    attempt: u32,
+    priority: i32,
+    claims: Vec<ResourceClaim>,
+    lease: TaskLease,
+    idempotency_key: String,
+    input_refs: Vec<ArtifactRef>,
+}
+
+enum TaskResult {
+    Completed {
+        lease_id: String,
+        idempotency_key: String,
+        outputs: Vec<ArtifactRef>,
+        evidence_refs: Vec<String>,
+    },
+    Error {
+        lease_id: String,
+        idempotency_key: String,
+        error_code: String,
+        retry_class: RetryClass,
+        side_effect_state: SideEffectState,
+    },
+}
+```
+
+```javascript group=scheduler-contract label=JavaScript
+/**
+ * @typedef (
+ *   { kind: 'concurrency_slot', pool: string, units: number } |
+ *   { kind: 'read_scope', scope: string } |
+ *   { kind: 'write_scope', scope: string } |
+ *   { kind: 'rate_limit', bucket: string, tokens: number }
+ * ) ResourceClaim
+ *
+ * @typedef {{
+ *   leaseId: string,
+ *   runId: string,
+ *   taskId: string,
+ *   planVersion: number,
+ *   attempt: number,
+ *   workerId: string,
+ *   issuedAt: string,
+ *   expiresAt: string,
+ *   heartbeatEveryMs: number
+ * }} TaskLease
+ *
+ * @typedef {{
+ *   taskId: string,
+ *   planVersion: number,
+ *   attempt: number,
+ *   priority: number,
+ *   claims: ResourceClaim[],
+ *   lease: TaskLease,
+ *   idempotencyKey: string,
+ *   inputRefs: ArtifactRef[]
+ * }} DispatchDecision
+ */
+```
+
 ### 5.1 Lease 和 idempotency key 分别解决什么
 
 - **Lease** 表示某个 worker 在有限时间内拥有该次尝试的执行权；
@@ -287,7 +402,41 @@ flowchart LR
 - **fan-in**：聚合节点等待其所需上游达到规定状态；
 - **join 策略**必须说明是 `all`、`any`、`quorum`、`best_effort` 还是条件表达式。
 
-```typescript
+```python group=multi-4c98e132830a label=Python
+from dataclasses import dataclass
+from typing import Literal
+
+@dataclass(frozen=True)
+class JoinPolicy:
+    kind: Literal["all", "any", "quorum", "best_effort", "predicate"]
+    minimum: int | None = None
+    deadline: str | None = None
+    predicate_id: str | None = None
+```
+
+```rust group=multi-4c98e132830a label=Rust
+enum JoinPolicy {
+    All,
+    Any,
+    Quorum { minimum: usize },
+    BestEffort { deadline: String, minimum: usize },
+    Predicate { predicate_id: String },
+}
+```
+
+```javascript group=multi-4c98e132830a label=JavaScript
+/**
+ * @typedef (
+ *   { kind: 'all' } |
+ *   { kind: 'any' } |
+ *   { kind: 'quorum', minimum: number } |
+ *   { kind: 'best_effort', deadline: string, minimum: number } |
+ *   { kind: 'predicate', predicateId: string }
+ * ) JoinPolicy
+ */
+```
+
+```typescript group=multi-4c98e132830a label=TypeScript
 type JoinPolicy =
   | { kind: 'all' }
   | { kind: 'any' }
@@ -426,6 +575,88 @@ async function scheduleTick(state: SchedulerState, now: Date): Promise<TaskLease
       const reservation = await tx.tryReserve(check.claims)
       if (!reservation) return null
 
+      const lease = await tx.createLease(task, now)
+      await tx.transition(task.id, 'ready', 'running', {
+        leaseId: lease.leaseId,
+        planVersion: task.planVersion,
+      })
+      return lease
+    })
+    if (committed) leases.push(committed)
+  }
+  return leases
+}
+```
+
+```rust group=ready-scheduler label=Rust
+async fn schedule_tick(
+    state: &mut SchedulerState,
+    now: DateTime<Utc>,
+) -> Result<Vec<TaskLease>, SchedulerError> {
+    expire_leases(state, now).await?;
+    propagate_cancellation(state).await?;
+
+    let mut candidates: Vec<_> = state
+        .active_plan
+        .tasks
+        .iter()
+        .filter_map(|task| {
+            let check = evaluate_ready(task, state, now);
+            check.ready.then_some((task, check))
+        })
+        .collect();
+    candidates.sort_by(|(left, _), (right, _)| {
+        right
+            .priority
+            .cmp(&left.priority)
+            .then(left.deadline.cmp(&right.deadline))
+            .then(left.id.cmp(&right.id))
+    });
+
+    let mut leases = Vec::new();
+    for (task, check) in candidates {
+        let committed = state
+            .transaction(|tx| async {
+                let reservation = tx.try_reserve(&check.claims).await?;
+                let lease = tx.create_lease(task, now).await?;
+                tx.transition(
+                    &task.id,
+                    TaskStatus::Ready,
+                    TaskStatus::Running,
+                    &lease,
+                )
+                .await?;
+                Ok(Some((reservation, lease)))
+            })
+            .await?;
+        if let Some((_, lease)) = committed {
+            leases.push(lease);
+        }
+    }
+    Ok(leases)
+}
+```
+
+```javascript group=ready-scheduler label=JavaScript
+async function scheduleTick(state, now) {
+  await expireLeases(state, now)
+  await propagateCancellation(state)
+
+  const candidates = state.activePlan.tasks
+    .map((task) => ({ task, check: evaluateReady(task, state, now) }))
+    .filter(({ check }) => check.ready)
+    .sort(
+      (a, b) =>
+        b.task.priority - a.task.priority ||
+        a.task.deadline.localeCompare(b.task.deadline) ||
+        a.task.id.localeCompare(b.task.id),
+    )
+
+  const leases = []
+  for (const { task, check } of candidates) {
+    const committed = await state.transaction(async (tx) => {
+      const reservation = await tx.tryReserve(check.claims)
+      if (!reservation) return null
       const lease = await tx.createLease(task, now)
       await tx.transition(task.id, 'ready', 'running', {
         leaseId: lease.leaseId,

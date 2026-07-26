@@ -48,7 +48,137 @@ Think 是广义的决策阶段，不要求把内部推理文本公开。模型�
 
 ## 5. 一个最小状态机
 
-```ts
+```python group=multi-424bd49095c6 label=Python
+from dataclasses import dataclass, field
+from typing import Literal
+
+@dataclass(frozen=True)
+class FinalValidation:
+    ok: bool
+    recoverable: bool
+    code: str
+    feedback: str
+
+@dataclass
+class AgentState:
+    goal: str
+    messages: list["Message"]
+    step: int
+    max_steps: int
+    deadline: float
+    evidence: list["EvidenceItem"] = field(default_factory=list)
+    status: Literal["running", "completed", "failed", "cancelled"] = "running"
+
+async def run_loop(state: AgentState, model, tools) -> None:
+    while state.status == "running":
+        assert_budget(state)
+        response = await model.respond(state.messages, tools)
+        if response.final_answer is not None:
+            validation = validate_answer(response.final_answer, state.evidence)
+            if validation.ok:
+                state.status = "completed"
+                break
+            if not validation.recoverable:
+                state.status = "failed"
+                break
+            state.messages.append(to_validation_observation(validation))
+            state.step += 1
+            continue
+
+        results = await execute_validated_tool_calls(response.tool_calls)
+        state.messages.extend(to_tool_result_messages(results))
+        state.evidence.extend(extract_evidence(results))
+        state.step += 1
+```
+
+```rust group=multi-424bd49095c6 label=Rust
+#[derive(Debug)]
+struct FinalValidation {
+    ok: bool,
+    recoverable: bool,
+    code: String,
+    feedback: String,
+}
+
+#[derive(Debug)]
+enum AgentStatus {
+    Running,
+    Completed,
+    Failed,
+    Cancelled,
+}
+
+struct AgentState {
+    goal: String,
+    messages: Vec<Message>,
+    step: u32,
+    max_steps: u32,
+    deadline_ms: u64,
+    evidence: Vec<EvidenceItem>,
+    status: AgentStatus,
+}
+
+async fn run_loop(
+    state: &mut AgentState,
+    model: &dyn Model,
+    tools: &[Tool],
+) -> Result<(), AgentError> {
+    while matches!(state.status, AgentStatus::Running) {
+        assert_budget(state)?;
+        let response = model.respond(&state.messages, tools).await?;
+        if let Some(answer) = response.final_answer {
+            let validation = validate_answer(&answer, &state.evidence);
+            if validation.ok {
+                state.status = AgentStatus::Completed;
+                break;
+            }
+            if !validation.recoverable {
+                state.status = AgentStatus::Failed;
+                break;
+            }
+            state.messages.push(to_validation_observation(validation));
+            state.step += 1;
+            continue;
+        }
+
+        let results = execute_validated_tool_calls(response.tool_calls).await?;
+        state.messages.extend(to_tool_result_messages(&results));
+        state.evidence.extend(extract_evidence(&results));
+        state.step += 1;
+    }
+    Ok(())
+}
+```
+
+```javascript group=multi-424bd49095c6 label=JavaScript
+async function runLoop(state, model, tools) {
+  while (state.status === 'running') {
+    assertBudget(state)
+    const response = await model.respond(state.messages, tools)
+    if (response.finalAnswer !== undefined) {
+      const validation = validateAnswer(response.finalAnswer, state.evidence)
+      if (validation.ok) {
+        state.status = 'completed'
+        break
+      }
+      if (!validation.recoverable) {
+        state.status = 'failed'
+        break
+      }
+      state.messages.push(toValidationObservation(validation))
+      state.step += 1
+      continue
+    }
+
+    const results = await executeValidatedToolCalls(response.toolCalls)
+    state.messages.push(...toToolResultMessages(results))
+    state.evidence.push(...extractEvidence(results))
+    state.step += 1
+  }
+}
+```
+
+```typescript group=multi-424bd49095c6 label=TypeScript
 type FinalValidation = {
   ok: boolean
   recoverable: boolean

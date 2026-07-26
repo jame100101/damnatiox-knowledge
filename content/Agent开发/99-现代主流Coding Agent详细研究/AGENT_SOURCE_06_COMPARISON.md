@@ -145,7 +145,7 @@ flowchart TD
 
 ### 2.4 推荐你的 loop state
 
-```python
+```python group=multi-42a7575cc5f1 label=Python
 @dataclass
 class TurnState:
     turn_id: str
@@ -164,6 +164,74 @@ class TurnState:
     compaction_count: int
     started_at: datetime
     stop_reason: str | None
+```
+
+```rust group=multi-42a7575cc5f1 label=Rust
+use chrono::{DateTime, Utc};
+use std::collections::HashMap;
+
+struct TurnState {
+    turn_id: String,
+    session_id: String,
+    user_input: String,
+    route: Option<String>,
+    plan: Vec<PlanStep>,
+    tool_calls: Vec<ToolCall>,
+    tool_results: Vec<ToolResult>,
+    evidence: HashMap<String, EvidenceItem>,
+    draft: Option<String>,
+    validation: Vec<ValidationResult>,
+    step_count: u32,
+    replan_count: u32,
+    model_attempt_count: u32,
+    compaction_count: u32,
+    started_at: DateTime<Utc>,
+    stop_reason: Option<String>,
+}
+```
+
+```javascript group=multi-42a7575cc5f1 label=JavaScript
+/**
+ * @typedef {{
+ *   turnId: string,
+ *   sessionId: string,
+ *   userInput: string,
+ *   route?: string,
+ *   plan: PlanStep[],
+ *   toolCalls: ToolCall[],
+ *   toolResults: ToolResult[],
+ *   evidence: Map<string, EvidenceItem>,
+ *   draft?: string,
+ *   validation: ValidationResult[],
+ *   stepCount: number,
+ *   replanCount: number,
+ *   modelAttemptCount: number,
+ *   compactionCount: number,
+ *   startedAt: Date,
+ *   stopReason?: string
+ * }} TurnState
+ */
+```
+
+```typescript group=multi-42a7575cc5f1 label=TypeScript
+type TurnState = {
+  turnId: string
+  sessionId: string
+  userInput: string
+  route?: string
+  plan: PlanStep[]
+  toolCalls: ToolCall[]
+  toolResults: ToolResult[]
+  evidence: Map<string, EvidenceItem>
+  draft?: string
+  validation: ValidationResult[]
+  stepCount: number
+  replanCount: number
+  modelAttemptCount: number
+  compactionCount: number
+  startedAt: Date
+  stopReason?: string
+}
 ```
 
 ---
@@ -251,10 +319,31 @@ Tool Definition
 
 ### 4.3 不应做的模式
 
-```python
+```python group=multi-d6341fe434cd label=Python
 if llm_output["tool"] == "calculator":
     result = calculator(**llm_output["args"])
     messages.append(str(result))
+```
+
+```rust group=multi-d6341fe434cd label=Rust
+if llm_output.tool == "calculator" {
+    let result = calculator(&llm_output.args)?;
+    messages.push(result.to_string());
+}
+```
+
+```javascript group=multi-d6341fe434cd label=JavaScript
+if (llmOutput.tool === 'calculator') {
+  const result = calculator(llmOutput.args)
+  messages.push(String(result))
+}
+```
+
+```typescript group=multi-d6341fe434cd label=TypeScript
+if (llmOutput.tool === 'calculator') {
+  const result = calculator(llmOutput.args)
+  messages.push(String(result))
+}
 ```
 
 缺失：
@@ -283,10 +372,41 @@ not a second orchestration system.
 
 推荐：
 
-```python
+```python group=multi-ac41b0d61437 label=Python
 class ToolAdapter(Protocol):
     def list_tools(self) -> list[ToolDefinition]: ...
     async def invoke(self, call: ToolCall) -> ToolResult: ...
+```
+
+```rust group=multi-ac41b0d61437 label=Rust
+use async_trait::async_trait;
+
+#[async_trait]
+trait ToolAdapter {
+    fn list_tools(&self) -> Vec<ToolDefinition>;
+    async fn invoke(&self, call: ToolCall) -> Result<ToolResult, ToolError>;
+}
+```
+
+```javascript group=multi-ac41b0d61437 label=JavaScript
+class ToolAdapter {
+  /** @returns {ToolDefinition[]} */
+  listTools() {
+    throw new Error('implement listTools()')
+  }
+
+  /** @param {ToolCall} call @returns {Promise<ToolResult>} */
+  async invoke(call) {
+    throw new Error('implement invoke(call)')
+  }
+}
+```
+
+```typescript group=multi-ac41b0d61437 label=TypeScript
+interface ToolAdapter {
+  listTools(): ToolDefinition[]
+  invoke(call: ToolCall): Promise<ToolResult>
+}
 ```
 
 内置 Python tool、MCP、browser client、DB connector 都适配到这里。
@@ -357,16 +477,60 @@ Skill: “如何做只读数据库故障分析，包括查询顺序、证据要�
 
 ### 5.4 推荐 skill loader
 
-```python
-class SkillCatalog:
-    discover()
-    validate_metadata()
-    filter_by_environment()
-    render_catalog(budget)
-    select_explicit()
-    select_implicit()
-    load_body()
-    resolve_resource()
+```python group=multi-d0a048f4d97d label=Python
+from typing import Protocol
+
+
+class SkillCatalog(Protocol):
+    def discover(self) -> list["SkillMetadata"]: ...
+    def validate_metadata(self, skill: "SkillMetadata") -> None: ...
+    def filter_by_environment(
+        self, environment: "Environment"
+    ) -> list["SkillMetadata"]: ...
+    def render_catalog(self, budget: int) -> str: ...
+    def select_explicit(self, name: str) -> "SkillMetadata | None": ...
+    def select_implicit(self, query: str) -> list["SkillMetadata"]: ...
+    def load_body(self, skill: "SkillMetadata") -> str: ...
+    def resolve_resource(self, path: str) -> bytes: ...
+```
+
+```rust group=multi-d0a048f4d97d label=Rust
+trait SkillCatalog {
+    fn discover(&self) -> Vec<SkillMetadata>;
+    fn validate_metadata(&self, skill: &SkillMetadata) -> Result<(), SkillError>;
+    fn filter_by_environment(&self, environment: &Environment) -> Vec<SkillMetadata>;
+    fn render_catalog(&self, budget: usize) -> String;
+    fn select_explicit(&self, name: &str) -> Option<SkillMetadata>;
+    fn select_implicit(&self, query: &str) -> Vec<SkillMetadata>;
+    fn load_body(&self, skill: &SkillMetadata) -> Result<String, SkillError>;
+    fn resolve_resource(&self, path: &str) -> Result<Vec<u8>, SkillError>;
+}
+```
+
+```javascript group=multi-d0a048f4d97d label=JavaScript
+class SkillCatalog {
+  discover() {}
+  validateMetadata() {}
+  filterByEnvironment() {}
+  renderCatalog(budget) {}
+  selectExplicit(name) {}
+  selectImplicit(query) {}
+  loadBody(skill) {}
+  resolveResource(path) {}
+}
+```
+
+```typescript group=multi-d0a048f4d97d label=TypeScript
+interface SkillCatalog {
+  discover(): SkillMetadata[]
+  validateMetadata(skill: SkillMetadata): void
+  filterByEnvironment(environment: Environment): SkillMetadata[]
+  renderCatalog(budget: number): string
+  selectExplicit(name: string): SkillMetadata | undefined
+  selectImplicit(query: string): SkillMetadata[]
+  loadBody(skill: SkillMetadata): string
+  resolveResource(path: string): Uint8Array
+}
 ```
 
 ---
@@ -387,7 +551,7 @@ class SkillCatalog:
 
 建议：
 
-```python
+```python group=multi-948b1c937a91 label=Python
 @dataclass(frozen=True)
 class EvidenceItem:
     id: str
@@ -401,6 +565,60 @@ class EvidenceItem:
     retrieved_at: datetime
     tool_call_id: str
     trust: str
+```
+
+```rust group=multi-948b1c937a91 label=Rust
+use chrono::{DateTime, Utc};
+use serde_json::Value;
+use std::collections::HashMap;
+
+struct EvidenceItem {
+    id: String,
+    turn_id: String,
+    source_type: String,
+    uri: String,
+    locator: Option<HashMap<String, Value>>,
+    excerpt: String,
+    content_hash: String,
+    score: Option<f64>,
+    retrieved_at: DateTime<Utc>,
+    tool_call_id: String,
+    trust: String,
+}
+```
+
+```javascript group=multi-948b1c937a91 label=JavaScript
+/**
+ * @typedef {{
+ *   id: string,
+ *   turnId: string,
+ *   sourceType: 'rag'|'web'|'db'|'file'|'browser'|'code'|'memory',
+ *   uri: string,
+ *   locator?: Record<string, unknown>,
+ *   excerpt: string,
+ *   contentHash: string,
+ *   score?: number,
+ *   retrievedAt: Date,
+ *   toolCallId: string,
+ *   trust: string
+ * }} EvidenceItem
+ */
+```
+
+```typescript group=multi-948b1c937a91 label=TypeScript
+type EvidenceItem = {
+  id: string
+  turnId: string
+  sourceType: 'rag' | 'web' | 'db' | 'file' | 'browser' | 'code' | 'memory'
+  uri: string
+  locator?: Record<string, unknown>
+  excerpt: string
+  contentHash: string
+  score?: number
+  retrievedAt: Date
+  toolCallId: string
+  trust: string
+}
 ```
 
 ### 6.3 完整 RAG
@@ -428,13 +646,52 @@ flowchart TD
 
 不要让 Router 凭训练知识猜“知识库是否收录”。使用 retrieval probe：
 
-```python
+```python group=multi-127e96f21a45 label=Python
 class CoverageResult:
     status: Literal["covered", "partial", "not_covered", "error"]
     top_score: float | None
     distinct_sources: int
     evidence_ids: list[str]
     reason_code: str
+```
+
+```rust group=multi-127e96f21a45 label=Rust
+enum CoverageStatus {
+    Covered,
+    Partial,
+    NotCovered,
+    Error,
+}
+
+struct CoverageResult {
+    status: CoverageStatus,
+    top_score: Option<f64>,
+    distinct_sources: usize,
+    evidence_ids: Vec<String>,
+    reason_code: String,
+}
+```
+
+```javascript group=multi-127e96f21a45 label=JavaScript
+/**
+ * @typedef {{
+ *   status: 'covered'|'partial'|'not_covered'|'error',
+ *   topScore?: number,
+ *   distinctSources: number,
+ *   evidenceIds: string[],
+ *   reasonCode: string
+ * }} CoverageResult
+ */
+```
+
+```typescript group=multi-127e96f21a45 label=TypeScript
+type CoverageResult = {
+  status: 'covered' | 'partial' | 'not_covered' | 'error'
+  topScore?: number
+  distinctSources: number
+  evidenceIds: string[]
+  reasonCode: string
+}
 ```
 
 Coverage 结合：
@@ -571,7 +828,7 @@ Long-term Memory
 
 ### 8.4 Session schema 建议
 
-```python
+```python group=multi-76fd9d1cce4d label=Python
 @dataclass
 class SessionState:
     session_id: str
@@ -581,6 +838,46 @@ class SessionState:
     user_constraints: list[Constraint]
     context_version: int
     last_compacted_turn_id: str | None
+```
+
+```rust group=multi-76fd9d1cce4d label=Rust
+use std::collections::VecDeque;
+
+struct SessionState {
+    session_id: String,
+    summary: SessionSummary,
+    recent_turns: VecDeque<TurnRecord>,
+    open_tasks: Vec<OpenTask>,
+    user_constraints: Vec<Constraint>,
+    context_version: u64,
+    last_compacted_turn_id: Option<String>,
+}
+```
+
+```javascript group=multi-76fd9d1cce4d label=JavaScript
+/**
+ * @typedef {{
+ *   sessionId: string,
+ *   summary: SessionSummary,
+ *   recentTurns: TurnRecord[],
+ *   openTasks: OpenTask[],
+ *   userConstraints: Constraint[],
+ *   contextVersion: number,
+ *   lastCompactedTurnId?: string
+ * }} SessionState
+ */
+```
+
+```typescript group=multi-76fd9d1cce4d label=TypeScript
+type SessionState = {
+  sessionId: string
+  summary: SessionSummary
+  recentTurns: TurnRecord[]
+  openTasks: OpenTask[]
+  userConstraints: Constraint[]
+  contextVersion: number
+  lastCompactedTurnId?: string
+}
 ```
 
 ---
@@ -805,13 +1102,57 @@ ProtocolEvent
 
 边界使用 Pydantic：
 
-```python
+```python group=multi-3e096de71ef8 label=Python
 class ValidationResult(BaseModel):
     status: Literal["pass", "fail"]
     reason_code: str | None = None
     retry_target: Literal["generator", "planner", "tool", "none"]
     message: str | None = None
     failed_claim_ids: list[str] = []
+```
+
+```rust group=multi-3e096de71ef8 label=Rust
+enum ValidationStatus {
+    Pass,
+    Fail,
+}
+
+enum RetryTarget {
+    Generator,
+    Planner,
+    Tool,
+    None,
+}
+
+struct ValidationResult {
+    status: ValidationStatus,
+    reason_code: Option<String>,
+    retry_target: RetryTarget,
+    message: Option<String>,
+    failed_claim_ids: Vec<String>,
+}
+```
+
+```javascript group=multi-3e096de71ef8 label=JavaScript
+/**
+ * @typedef {{
+ *   status: 'pass'|'fail',
+ *   reasonCode?: string,
+ *   retryTarget: 'generator'|'planner'|'tool'|'none',
+ *   message?: string,
+ *   failedClaimIds: string[]
+ * }} ValidationResult
+ */
+```
+
+```typescript group=multi-3e096de71ef8 label=TypeScript
+type ValidationResult = {
+  status: 'pass' | 'fail'
+  reasonCode?: string
+  retryTarget: 'generator' | 'planner' | 'tool' | 'none'
+  message?: string
+  failedClaimIds: string[]
+}
 ```
 
 内部热点路径可用 frozen dataclass，避免每一步重复昂贵 validation。
@@ -915,7 +1256,7 @@ RAG/web/tool result 都是不受信数据：
 
 ### 15.1 Trace event schema
 
-```python
+```python group=multi-4746aa4071c1 label=Python
 class TraceEvent(BaseModel):
     event_id: str
     session_id: str
@@ -926,6 +1267,54 @@ class TraceEvent(BaseModel):
     payload: dict[str, object]
     parent_event_id: str | None
     schema_version: int
+```
+
+```rust group=multi-4746aa4071c1 label=Rust
+use chrono::{DateTime, Utc};
+use serde_json::Value;
+use std::collections::HashMap;
+
+struct TraceEvent {
+    event_id: String,
+    session_id: String,
+    turn_id: String,
+    step_id: Option<String>,
+    event_type: String,
+    timestamp: DateTime<Utc>,
+    payload: HashMap<String, Value>,
+    parent_event_id: Option<String>,
+    schema_version: u32,
+}
+```
+
+```javascript group=multi-4746aa4071c1 label=JavaScript
+/**
+ * @typedef {{
+ *   eventId: string,
+ *   sessionId: string,
+ *   turnId: string,
+ *   stepId?: string,
+ *   type: string,
+ *   timestamp: Date,
+ *   payload: Record<string, unknown>,
+ *   parentEventId?: string,
+ *   schemaVersion: number
+ * }} TraceEvent
+ */
+```
+
+```typescript group=multi-4746aa4071c1 label=TypeScript
+type TraceEvent = {
+  eventId: string
+  sessionId: string
+  turnId: string
+  stepId?: string
+  type: string
+  timestamp: Date
+  payload: Record<string, unknown>
+  parentEventId?: string
+  schemaVersion: number
+}
 ```
 
 ### 15.2 必备事件

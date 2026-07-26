@@ -118,7 +118,7 @@ flowchart TD
 
 推荐预算模型：
 
-```python
+```python group=multi-50e083d38ba1 label=Python
 @dataclass
 class LoopBudget:
     max_steps: int
@@ -128,6 +128,44 @@ class LoopBudget:
     max_replans: int
     max_validation_repairs: int
     max_compactions: int
+```
+
+```rust group=multi-50e083d38ba1 label=Rust
+struct LoopBudget {
+    max_steps: u32,
+    max_wall_time_ms: u64,
+    max_model_attempts: u32,
+    max_tool_retries_per_call: u32,
+    max_replans: u32,
+    max_validation_repairs: u32,
+    max_compactions: u32,
+}
+```
+
+```javascript group=multi-50e083d38ba1 label=JavaScript
+/**
+ * @typedef {{
+ *   maxSteps: number,
+ *   maxWallTimeMs: number,
+ *   maxModelAttempts: number,
+ *   maxToolRetriesPerCall: number,
+ *   maxReplans: number,
+ *   maxValidationRepairs: number,
+ *   maxCompactions: number
+ * }} LoopBudget
+ */
+```
+
+```typescript group=multi-50e083d38ba1 label=TypeScript
+type LoopBudget = {
+  maxSteps: number
+  maxWallTimeMs: number
+  maxModelAttempts: number
+  maxToolRetriesPerCall: number
+  maxReplans: number
+  maxValidationRepairs: number
+  maxCompactions: number
+}
 ```
 
 ### 2.3 内部消息格式
@@ -193,7 +231,7 @@ tool(tool_call_id, content)
 
 Hermes 的工具模块通常在 import 时调用：
 
-```python
+```python group=multi-59a6d5867231 label=Python
 registry.register(
     name="my_tool",
     toolset="...",
@@ -201,6 +239,36 @@ registry.register(
     handler=my_tool,
     check_fn=_check_requirements,
 )
+```
+
+```rust group=multi-59a6d5867231 label=Rust
+registry.register(ToolRegistration {
+    name: "my_tool",
+    toolset: "...",
+    schema: &MY_TOOL_SCHEMA,
+    handler: my_tool,
+    check: check_requirements,
+})?;
+```
+
+```javascript group=multi-59a6d5867231 label=JavaScript
+registry.register({
+  name: 'my_tool',
+  toolset: '...',
+  schema: MY_TOOL_SCHEMA,
+  handler: myTool,
+  check: checkRequirements,
+})
+```
+
+```typescript group=multi-59a6d5867231 label=TypeScript
+registry.register({
+  name: 'my_tool',
+  toolset: '...',
+  schema: MY_TOOL_SCHEMA,
+  handler: myTool,
+  check: checkRequirements,
+} satisfies ToolRegistration)
 ```
 
 `model_tools.py`/discovery 触发工具模块导入。文档明确把这称为 self-registering tools。
@@ -225,7 +293,7 @@ registry.register(
 
 仓库 CONTRIBUTING 给出的模式：
 
-```python
+```python group=multi-a2ef864f73c4 label=Python
 MY_TOOL_SCHEMA = {
     "type": "function",
     "function": {
@@ -241,6 +309,60 @@ MY_TOOL_SCHEMA = {
         },
     },
 }
+```
+
+```rust group=multi-a2ef864f73c4 label=Rust
+let my_tool_schema = serde_json::json!({
+    "type": "function",
+    "function": {
+        "name": "my_tool",
+        "description": "...",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "param1": { "type": "string" },
+                "param2": { "type": "integer", "default": 10 }
+            },
+            "required": ["param1"]
+        }
+    }
+});
+```
+
+```javascript group=multi-a2ef864f73c4 label=JavaScript
+const MY_TOOL_SCHEMA = {
+  type: 'function',
+  function: {
+    name: 'my_tool',
+    description: '...',
+    parameters: {
+      type: 'object',
+      properties: {
+        param1: { type: 'string' },
+        param2: { type: 'integer', default: 10 },
+      },
+      required: ['param1'],
+    },
+  },
+}
+```
+
+```typescript group=multi-a2ef864f73c4 label=TypeScript
+const MY_TOOL_SCHEMA = {
+  type: 'function',
+  function: {
+    name: 'my_tool',
+    description: '...',
+    parameters: {
+      type: 'object',
+      properties: {
+        param1: { type: 'string' },
+        param2: { type: 'integer', default: 10 },
+      },
+      required: ['param1'],
+    },
+  },
+} as const
 ```
 
 值得借鉴的是 schema、handler、requirements check 在一个工具模块附近，registry/executor 保持通用。
@@ -497,7 +619,7 @@ SQLite session store 使用 FTS5 支持：
 
 Hermes 有 transcript、tool calls 和 verification，但若建设“每个回答都可溯源”的研究 agent，建议加入：
 
-```python
+```python group=multi-a49905d180db label=Python
 @dataclass(frozen=True)
 class EvidenceItem:
     evidence_id: str
@@ -509,6 +631,52 @@ class EvidenceItem:
     content_hash: str
     retrieved_at: datetime
     tool_call_id: str
+```
+
+```rust group=multi-a49905d180db label=Rust
+use chrono::{DateTime, Utc};
+
+struct EvidenceItem {
+    evidence_id: String,
+    turn_id: String,
+    source_type: String,
+    source_uri: String,
+    locator: Option<String>,
+    excerpt: String,
+    content_hash: String,
+    retrieved_at: DateTime<Utc>,
+    tool_call_id: String,
+}
+```
+
+```javascript group=multi-a49905d180db label=JavaScript
+/**
+ * @typedef {{
+ *   evidenceId: string,
+ *   turnId: string,
+ *   sourceType: string,
+ *   sourceUri: string,
+ *   locator?: string,
+ *   excerpt: string,
+ *   contentHash: string,
+ *   retrievedAt: Date,
+ *   toolCallId: string
+ * }} EvidenceItem
+ */
+```
+
+```typescript group=multi-a49905d180db label=TypeScript
+type EvidenceItem = {
+  evidenceId: string
+  turnId: string
+  sourceType: string
+  sourceUri: string
+  locator?: string
+  excerpt: string
+  contentHash: string
+  retrievedAt: Date
+  toolCallId: string
+}
 ```
 
 工具结果与 evidence 的关系：
@@ -813,13 +981,45 @@ compression child 必须记录 parent lineage
 
 对新模块，建议逐步把任意 dict 收敛成：
 
-```python
+```python group=multi-9d9c61db9763 label=Python
 ToolCall
 ToolResult
 ProviderResponse
 ValidationResult
 TurnRecord
 SessionSummary
+```
+
+```rust group=multi-9d9c61db9763 label=Rust
+enum AgentRecord {
+    ToolCall(ToolCall),
+    ToolResult(ToolResult),
+    ProviderResponse(ProviderResponse),
+    ValidationResult(ValidationResult),
+    TurnRecord(TurnRecord),
+    SessionSummary(SessionSummary),
+}
+```
+
+```javascript group=multi-9d9c61db9763 label=JavaScript
+const recordTypes = [
+  ToolCall,
+  ToolResult,
+  ProviderResponse,
+  ValidationResult,
+  TurnRecord,
+  SessionSummary,
+]
+```
+
+```typescript group=multi-9d9c61db9763 label=TypeScript
+type AgentRecord =
+  | ToolCall
+  | ToolResult
+  | ProviderResponse
+  | ValidationResult
+  | TurnRecord
+  | SessionSummary
 ```
 
 并在 provider、DB、plugin 等边界做一次显式转换，减少 sanitizer 继续膨胀。
@@ -894,12 +1094,48 @@ flowchart TD
 
 若要求返回 `[1, 2, 3]`，代码 validator 应先执行：
 
-```python
+```python group=multi-8b8f70756603 label=Python
 def validate_expected(value: object) -> tuple[bool, str | None]:
     expected = {"items": [1, 2, 3]}
     if value != expected:
         return False, f"expected={expected!r}, received={value!r}"
     return True, None
+```
+
+```rust group=multi-8b8f70756603 label=Rust
+fn validate_expected(value: &serde_json::Value) -> Result<(), String> {
+    let expected = serde_json::json!({ "items": [1, 2, 3] });
+    if value != &expected {
+        return Err(format!("expected={expected}, received={value}"));
+    }
+    Ok(())
+}
+```
+
+```javascript group=multi-8b8f70756603 label=JavaScript
+function validateExpected(value) {
+  const expected = { items: [1, 2, 3] }
+  if (JSON.stringify(value) !== JSON.stringify(expected)) {
+    return [
+      false,
+      'expected=' + JSON.stringify(expected) + ', received=' + JSON.stringify(value),
+    ]
+  }
+  return [true, null]
+}
+```
+
+```typescript group=multi-8b8f70756603 label=TypeScript
+function validateExpected(value: unknown): [boolean, string | null] {
+  const expected = { items: [1, 2, 3] }
+  if (JSON.stringify(value) !== JSON.stringify(expected)) {
+    return [
+      false,
+      'expected=' + JSON.stringify(expected) + ', received=' + JSON.stringify(value),
+    ]
+  }
+  return [true, null]
+}
 ```
 
 第二个 LLM 更适合：

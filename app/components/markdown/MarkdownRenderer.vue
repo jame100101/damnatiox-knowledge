@@ -21,6 +21,14 @@ let previousBodyOverflow = ''
 let dragStartX = 0
 let dragStartY = 0
 let codeGroupSequence = 0
+const codeLanguageOrder = new Map([
+  ['python', 0],
+  ['rust', 1],
+  ['javascript', 2],
+  ['js', 2],
+  ['typescript', 3],
+  ['ts', 3],
+])
 
 function cssVariable(name: string, fallback: string) {
   return (
@@ -111,6 +119,17 @@ function enhanceCodeGroups() {
 
   groups.forEach((blocks, group) => {
     if (blocks.length < 2) return
+    blocks.sort((left, right) => {
+      const leftOrder = codeLanguageOrder.get(
+        left.dataset.codeLanguage?.toLowerCase() || '',
+      )
+      const rightOrder = codeLanguageOrder.get(
+        right.dataset.codeLanguage?.toLowerCase() || '',
+      )
+      return (
+        (leftOrder ?? Number.MAX_SAFE_INTEGER) - (rightOrder ?? Number.MAX_SAFE_INTEGER)
+      )
+    })
     const section = document.createElement('section')
     const tabs = document.createElement('div')
     const panels = document.createElement('div')

@@ -46,7 +46,37 @@ prepare -> preview -> confirm -> execute -> verify
 
 ## 5. Playwright 示例
 
-```ts
+```python group=multi-cdba4d212afd label=Python
+button = page.get_by_role("button", name="保存")
+await expect(button).to_be_visible()
+await expect(button).to_be_enabled()
+await button.click()
+await expect(page.get_by_text("保存成功")).to_be_visible()
+```
+
+```rust group=multi-cdba4d212afd label=Rust
+let button = driver
+    .query(By::XPath("//button[normalize-space()='保存']"))
+    .first()
+    .await?;
+assert!(button.is_displayed().await?);
+assert!(button.is_enabled().await?);
+button.click().await?;
+driver
+    .query(By::XPath("//*[contains(text(),'保存成功')]"))
+    .first()
+    .await?;
+```
+
+```javascript group=multi-cdba4d212afd label=JavaScript
+const button = page.getByRole('button', { name: '保存' })
+await expect(button).toBeVisible()
+await expect(button).toBeEnabled()
+await button.click()
+await expect(page.getByText('保存成功')).toBeVisible()
+```
+
+```typescript group=multi-cdba4d212afd label=TypeScript
 const button = page.getByRole('button', { name: '保存' })
 await expect(button).toBeVisible()
 await expect(button).toBeEnabled()
