@@ -1,24 +1,49 @@
 <script setup lang="ts">
-import { BookOpen, FilePlus2, Files, FolderTree, Gauge, LogOut } from 'lucide-vue-next'
+import { BookOpen, LogOut, Menu, X } from 'lucide-vue-next'
 
 const auth = useAuth()
 const { isDemo } = useKnowledge()
+const route = useRoute()
+const mobileOpen = ref(false)
+
+watch(
+  () => route.fullPath,
+  () => {
+    mobileOpen.value = false
+  },
+)
 </script>
 
 <template>
   <div class="admin-shell">
-    <aside>
-      <NuxtLink to="/" class="admin-brand"
-        ><BrandMark /><span
-          ><strong>Damnatiox</strong><small>ADMIN CONSOLE</small></span
-        ></NuxtLink
-      >
-      <nav>
-        <NuxtLink to="/admin"><Gauge :size="16" /> 仪表盘</NuxtLink>
-        <NuxtLink to="/admin/folders"><FolderTree :size="16" /> 文件夹</NuxtLink>
-        <NuxtLink to="/admin/documents"><Files :size="16" /> 文档管理</NuxtLink>
-        <NuxtLink to="/admin/documents/new"><FilePlus2 :size="16" /> 新建文档</NuxtLink>
-      </nav>
+    <header class="admin-mobile-header">
+      <button type="button" aria-label="打开知识文件" @click="mobileOpen = true">
+        <Menu :size="20" />
+      </button>
+      <NuxtLink to="/admin"><BrandMark /><strong>Damnatiox</strong></NuxtLink>
+      <ThemeToggle />
+    </header>
+
+    <div v-if="mobileOpen" class="admin-backdrop" @click="mobileOpen = false" />
+    <aside :class="{ mobileOpen }">
+      <div class="admin-brand-row">
+        <NuxtLink to="/admin" class="admin-brand"
+          ><BrandMark /><span
+            ><strong>Damnatiox</strong><small>KNOWLEDGE WORKSPACE</small></span
+          ></NuxtLink
+        >
+        <button
+          class="mobile-close"
+          type="button"
+          aria-label="关闭知识文件"
+          @click="mobileOpen = false"
+        >
+          <X :size="17" />
+        </button>
+      </div>
+
+      <AdminExplorer />
+
       <div class="admin-bottom">
         <NuxtLink to="/"><BookOpen :size="15" /> 查看知识库</NuxtLink>
         <ThemeToggle show-label />
@@ -36,73 +61,77 @@ const { isDemo } = useKnowledge()
 
 <style scoped>
 .admin-shell {
+  --admin-sidebar-width: 294px;
   min-height: 100vh;
   display: grid;
-  grid-template-columns: 220px 1fr;
+  grid-template-columns: var(--admin-sidebar-width) minmax(0, 1fr);
 }
 aside {
   position: sticky;
   top: 0;
+  z-index: 40;
   height: 100vh;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  padding: 17px 12px 12px;
+  padding: 13px 10px 10px;
   border-right: 1px solid var(--kb-border);
   background: var(--kb-surface);
 }
+.admin-brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
 .admin-brand {
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 9px;
-  padding: 2px 7px 24px;
+  padding: 0 6px 16px;
 }
 .admin-brand span {
+  min-width: 0;
   display: grid;
 }
 .admin-brand strong {
   font-size: 13px;
 }
 .admin-brand small {
+  overflow: hidden;
   color: var(--kb-text-subtle);
-  font: 8px monospace;
+  font: 7px monospace;
   letter-spacing: 0.12em;
+  white-space: nowrap;
 }
-nav {
+.mobile-close {
+  display: none;
+}
+.admin-bottom {
   display: grid;
-  gap: 3px;
+  gap: 2px;
+  padding-top: 7px;
+  border-top: 1px solid var(--kb-border);
 }
-nav a,
 .admin-bottom a,
 .admin-bottom button {
-  min-height: 39px;
+  width: 100%;
+  min-height: 34px;
   display: flex;
   align-items: center;
   gap: 9px;
-  padding: 8px 10px;
+  padding: 6px 8px;
   border: 0;
   border-radius: var(--kb-radius-sm);
   background: transparent;
   color: var(--kb-text-muted);
-  font-size: 13px;
+  font-size: 11px;
   cursor: pointer;
 }
-nav a:hover,
-nav a.router-link-exact-active,
 .admin-bottom a:hover,
 .admin-bottom button:hover {
   background: var(--kb-surface-hover);
   color: var(--kb-text);
-}
-nav a.router-link-exact-active {
-  box-shadow: inset 2px 0 var(--kb-accent);
-}
-.admin-bottom {
-  margin-top: auto;
-  padding-top: 10px;
-  border-top: 1px solid var(--kb-border);
-}
-.admin-bottom button {
-  width: 100%;
 }
 main {
   min-width: 0;
@@ -116,39 +145,70 @@ main {
   color: var(--kb-demo-text);
   font: 10px monospace;
 }
-@media (max-width: 720px) {
+.admin-mobile-header,
+.admin-backdrop {
+  display: none;
+}
+@media (max-width: 760px) {
   .admin-shell {
-    grid-template-columns: 1fr;
-    padding-bottom: 58px;
+    display: block;
+    padding-top: 54px;
+  }
+  .admin-mobile-header {
+    position: fixed;
+    inset: 0 0 auto;
+    z-index: 45;
+    height: 54px;
+    display: grid;
+    grid-template-columns: 36px 1fr 36px;
+    align-items: center;
+    padding: 0 10px;
+    border-bottom: 1px solid var(--kb-border);
+    background: var(--kb-panel-bg);
+    backdrop-filter: blur(8px);
+  }
+  .admin-mobile-header > button {
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    background: transparent;
+    color: var(--kb-text-muted);
+  }
+  .admin-mobile-header > a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 12px;
   }
   aside {
     position: fixed;
-    inset: auto 0 0;
-    z-index: 30;
-    width: auto;
-    height: 58px;
-    display: block;
-    padding: 5px;
-    border: 1px solid var(--kb-border);
+    inset: 0 auto 0 0;
+    width: min(310px, 88vw);
+    height: 100vh;
+    transform: translateX(-100%);
+    transition: transform 180ms ease;
   }
-  .admin-brand,
-  .admin-bottom {
-    display: none;
+  aside.mobileOpen {
+    transform: translateX(0);
   }
-  nav {
-    height: 100%;
+  .mobile-close {
+    width: 32px;
+    height: 32px;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    place-items: center;
+    border: 0;
+    background: transparent;
+    color: var(--kb-text-muted);
   }
-  nav a {
-    min-width: 0;
-    justify-content: center;
-    padding: 7px;
-    font-size: 0;
-  }
-  nav a svg {
-    width: 19px;
-    height: 19px;
+  .admin-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 35;
+    display: block;
+    background: rgb(0 0 0 / 64%);
   }
 }
 </style>

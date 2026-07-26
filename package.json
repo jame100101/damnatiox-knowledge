@@ -27,7 +27,6 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.58.0",
-    "gray-matter": "^4.0.3",
     "highlight.js": "^11.11.1",
     "katex": "^0.16.22",
     "lucide-vue-next": "^0.468.0",

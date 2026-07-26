@@ -1,4 +1,3 @@
-import matter from 'gray-matter'
 import hljs from 'highlight.js'
 import katex from 'katex'
 import MarkdownIt from 'markdown-it'
@@ -17,6 +16,70 @@ export type ParsedMarkdown = {
   status: 'draft' | 'published'
   order: number
   folderSuggestion: string
+}
+
+function unquoteFrontmatterValue(value: string): string {
+  const trimmed = value.trim()
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1)
+  }
+  return trimmed
+}
+
+function splitFrontmatter(source: string): {
+  content: string
+  data: Record<string, string | string[]>
+} {
+  const normalized = source.replace(/^\uFEFF/, '')
+  if (!normalized.startsWith('---\n') && !normalized.startsWith('---\r\n')) {
+    return { content: normalized, data: {} }
+  }
+  const lines = normalized.split(/\r?\n/)
+  const closingIndex = lines.findIndex(
+    (line, index) => index > 0 && line.trim() === '---',
+  )
+  if (closingIndex < 0) throw new Error('缺少 Frontmatter 结束标记')
+
+  const data: Record<string, string | string[]> = {}
+  let activeListKey = ''
+  for (const line of lines.slice(1, closingIndex)) {
+    const listItem = /^\s*-\s+(.+)$/.exec(line)
+    if (listItem && activeListKey) {
+      const current = data[activeListKey]
+      const values = Array.isArray(current) ? current : []
+      values.push(unquoteFrontmatterValue(listItem[1]!))
+      data[activeListKey] = values
+      continue
+    }
+    const field = /^([A-Za-z][\w-]*):\s*(.*)$/.exec(line)
+    if (!field) {
+      if (line.trim()) throw new Error(`不支持的字段格式：${line.trim()}`)
+      continue
+    }
+    const key = field[1]!
+    const rawValue = field[2]!.trim()
+    activeListKey = rawValue ? '' : key
+    if (!rawValue) {
+      data[key] = []
+      continue
+    }
+    if (rawValue.startsWith('[') && rawValue.endsWith(']')) {
+      data[key] = rawValue
+        .slice(1, -1)
+        .split(',')
+        .map(unquoteFrontmatterValue)
+        .filter(Boolean)
+      continue
+    }
+    data[key] = unquoteFrontmatterValue(rawValue)
+  }
+  return {
+    content: lines.slice(closingIndex + 1).join('\n'),
+    data,
+  }
 }
 
 function stripUnsafeProtocols(value: string): string {
@@ -61,7 +124,13 @@ const md: MarkdownIt = new MarkdownIt({
     katexOptions: { trust: false, strict: 'ignore', throwOnError: false },
   })
 
-md.renderer.rules.link_open = (tokens: any[], idx: number, options: any, _env: any, self: any) => {
+md.renderer.rules.link_open = (
+  tokens: any[],
+  idx: number,
+  options: any,
+  _env: any,
+  self: any,
+) => {
   const href = tokens[idx]?.attrGet('href') || ''
   tokens[idx]?.attrSet('href', stripUnsafeProtocols(href))
   if (/^https?:/i.test(href)) {
@@ -77,13 +146,19 @@ export function parseFrontmatter(
 ): ParsedMarkdown {
   const fallbackTitle = filename.replace(/\.(md|markdown)$/i, '')
   try {
-    const parsed = matter(source)
-    const data = parsed.data as Record<string, unknown>
+    const parsed = splitFrontmatter(source)
+    const data = parsed.data
     const title = String(data.title || fallbackTitle).trim() || fallbackTitle
     const tags = Array.isArray(data.tags)
-      ? data.tags.map(String).map((item) => item.trim()).filter(Boolean)
+      ? data.tags
+          .map(String)
+          .map((item) => item.trim())
+          .filter(Boolean)
       : typeof data.tags === 'string'
-        ? data.tags.split(',').map((item) => item.trim()).filter(Boolean)
+        ? data.tags
+            .split(',')
+            .map((item) => item.trim())
+            .filter(Boolean)
         : []
     return {
       content: parsed.content.trimStart(),

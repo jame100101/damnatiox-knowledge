@@ -1,23 +1,25 @@
-import type {
-  DocumentDraft,
-  Folder,
-  KnowledgeDocument,
-} from '~/types/knowledge'
+import type { DocumentDraft, Folder, KnowledgeDocument } from '~/types/knowledge'
 import { demoDocuments, demoFolders } from '~/data/demo'
 import { excerpt, readingTime } from '~/utils/markdown'
+import { sortDocuments, sortFolders } from '~/utils/folders'
 
 export function useKnowledge() {
   const nuxtApp = useNuxtApp()
   const folders = useState<Folder[]>('knowledge-folders', () => [])
   const documents = useState<KnowledgeDocument[]>('knowledge-documents', () => [])
   const loaded = useState('knowledge-loaded', () => false)
+  const loadedIncludesDrafts = useState('knowledge-loaded-includes-drafts', () => false)
   const loading = useState('knowledge-loading', () => false)
   const error = useState<string | null>('knowledge-error', () => null)
   const updateAvailable = useState('knowledge-update', () => false)
   const isDemo = computed(() => !nuxtApp.$supabaseConfigured)
 
   async function load(force = false, includeDrafts = false) {
-    if ((loaded.value && !force) || loading.value) return
+    if (
+      (loaded.value && !force && (!includeDrafts || loadedIncludesDrafts.value)) ||
+      loading.value
+    )
+      return
     loading.value = true
     error.value = null
     try {
@@ -44,18 +46,17 @@ export function useKnowledge() {
         documents.value = (documentResult.data || []) as KnowledgeDocument[]
       }
       loaded.value = true
+      loadedIncludesDrafts.value =
+        isDemo.value || (includeDrafts && !import.meta.server)
       updateAvailable.value = false
     } catch (cause) {
-      error.value =
-        cause instanceof Error ? cause.message : '读取知识库数据时发生错误'
+      error.value = cause instanceof Error ? cause.message : '读取知识库数据时发生错误'
     } finally {
       loading.value = false
     }
   }
 
-  async function saveFolder(
-    input: Partial<Folder> & Pick<Folder, 'name' | 'slug'>,
-  ) {
+  async function saveFolder(input: Partial<Folder> & Pick<Folder, 'name' | 'slug'>) {
     if (isDemo.value) {
       const now = new Date().toISOString()
       const folder: Folder = {
@@ -110,6 +111,127 @@ export function useKnowledge() {
     await load(true, true)
   }
 
+  async function deleteFolderTree(id: string) {
+    const descendantIds: string[] = []
+    const collect = (parentId: string) => {
+      for (const folder of folders.value.filter(
+        (item) => item.parent_id === parentId,
+      )) {
+        collect(folder.id)
+        descendantIds.push(folder.id)
+      }
+    }
+    collect(id)
+    const folderIds = [...descendantIds, id]
+    const documentsToDelete = documents.value.filter(
+      (item) => item.folder_id && folderIds.includes(item.folder_id),
+    )
+
+    if (isDemo.value) {
+      documents.value = documents.value.filter(
+        (item) => !item.folder_id || !folderIds.includes(item.folder_id),
+      )
+      folders.value = folders.value.filter((item) => !folderIds.includes(item.id))
+      return
+    }
+
+    const storagePaths = documentsToDelete
+      .map((item) => item.source_storage_path)
+      .filter((path): path is string => Boolean(path))
+    if (storagePaths.length) {
+      const { error: storageError } = await nuxtApp.$supabase.storage
+        .from('knowledge-source')
+        .remove(storagePaths)
+      if (storageError) throw storageError
+    }
+    if (documentsToDelete.length) {
+      const { error: documentDeleteError } = await nuxtApp.$supabase
+        .from('documents')
+        .delete()
+        .in(
+          'id',
+          documentsToDelete.map((item) => item.id),
+        )
+      if (documentDeleteError) throw documentDeleteError
+    }
+    for (const folderId of folderIds) {
+      const { error: folderDeleteError } = await nuxtApp.$supabase
+        .from('folders')
+        .delete()
+        .eq('id', folderId)
+      if (folderDeleteError) throw folderDeleteError
+    }
+    await load(true, true)
+  }
+
+  async function moveFolder(id: string, direction: -1 | 1) {
+    const folder = folders.value.find((item) => item.id === id)
+    if (!folder) return
+    const siblings = folders.value
+      .filter((item) => item.parent_id === folder.parent_id)
+      .sort(sortFolders)
+    const index = siblings.findIndex((item) => item.id === id)
+    const target = index + direction
+    if (index < 0 || target < 0 || target >= siblings.length) return
+    ;[siblings[index], siblings[target]] = [siblings[target]!, siblings[index]!]
+    const updates = siblings.map((item, itemIndex) => ({
+      id: item.id,
+      sort_order: (itemIndex + 1) * 10,
+    }))
+    if (isDemo.value) {
+      for (const update of updates) {
+        const current = folders.value.find((item) => item.id === update.id)
+        if (current) current.sort_order = update.sort_order
+      }
+      return
+    }
+    const results = await Promise.all(
+      updates.map((update) =>
+        nuxtApp.$supabase
+          .from('folders')
+          .update({ sort_order: update.sort_order })
+          .eq('id', update.id),
+      ),
+    )
+    const updateError = results.find((result) => result.error)?.error
+    if (updateError) throw updateError
+    await load(true, true)
+  }
+
+  async function moveDocument(id: string, direction: -1 | 1) {
+    const document = documents.value.find((item) => item.id === id)
+    if (!document) return
+    const siblings = documents.value
+      .filter((item) => item.folder_id === document.folder_id)
+      .sort(sortDocuments)
+    const index = siblings.findIndex((item) => item.id === id)
+    const target = index + direction
+    if (index < 0 || target < 0 || target >= siblings.length) return
+    ;[siblings[index], siblings[target]] = [siblings[target]!, siblings[index]!]
+    const updates = siblings.map((item, itemIndex) => ({
+      id: item.id,
+      sort_order: (itemIndex + 1) * 10,
+    }))
+    if (isDemo.value) {
+      for (const update of updates) {
+        const current = documents.value.find((item) => item.id === update.id)
+        if (current) current.sort_order = update.sort_order
+      }
+      return
+    }
+    const results = await Promise.all(
+      updates.map((update) =>
+        nuxtApp.$supabase
+          .from('documents')
+          .update({ sort_order: update.sort_order })
+          .eq('id', update.id),
+      ),
+    )
+    const updateError = results.find((result) => result.error)?.error
+    if (updateError) throw updateError
+    await load(true, true)
+  }
+
   async function saveDocument(draft: DocumentDraft, file?: File) {
     const payload = {
       folder_id: draft.folder_id,
@@ -124,8 +246,7 @@ export function useKnowledge() {
       excerpt: excerpt(draft.content),
       original_filename: draft.original_filename || null,
       file_size_bytes: draft.file_size_bytes || null,
-      published_at:
-        draft.status === 'published' ? new Date().toISOString() : null,
+      published_at: draft.status === 'published' ? new Date().toISOString() : null,
     }
     if (isDemo.value) {
       const now = new Date().toISOString()
@@ -146,10 +267,7 @@ export function useKnowledge() {
     }
     let documentId = draft.id
     const query = documentId
-      ? nuxtApp.$supabase
-          .from('documents')
-          .update(payload)
-          .eq('id', documentId)
+      ? nuxtApp.$supabase.from('documents').update(payload).eq('id', documentId)
       : nuxtApp.$supabase.from('documents').insert(payload)
     const { data, error: saveError } = await query.select().single()
     if (saveError) throw saveError
@@ -204,7 +322,10 @@ export function useKnowledge() {
     load,
     saveFolder,
     deleteFolder,
+    deleteFolderTree,
+    moveFolder,
     saveDocument,
     deleteDocument,
+    moveDocument,
   }
 }

@@ -12,18 +12,32 @@ import { parseFrontmatter } from '~/utils/markdown'
 import { isSafeMarkdownFilename, slugify } from '~/utils/slug'
 
 const props = defineProps<{ document?: KnowledgeDocument }>()
-const { folders, load, saveDocument } = useKnowledge()
+const route = useRoute()
+const { folders, documents, load, saveDocument } = useKnowledge()
 await load(false, true)
+const requestedFolderId =
+  typeof route.query.folder === 'string' &&
+  folders.value.some((item) => item.id === route.query.folder)
+    ? route.query.folder
+    : null
+const defaultFolderId = props.document?.folder_id || requestedFolderId
+const nextSortOrder =
+  Math.max(
+    0,
+    ...documents.value
+      .filter((item) => item.folder_id === defaultFolderId)
+      .map((item) => item.sort_order),
+  ) + 10
 const initial = (): DocumentDraft => ({
   id: props.document?.id,
-  folder_id: props.document?.folder_id || null,
+  folder_id: defaultFolderId,
   title: props.document?.title || '',
   slug: props.document?.slug || '',
   description: props.document?.description || '',
   tags: props.document?.tags || [],
   content: props.document?.content || '# 新文档\n\n开始记录你的知识…',
   status: props.document?.status || 'draft',
-  sort_order: props.document?.sort_order || 0,
+  sort_order: props.document?.sort_order || nextSortOrder,
   original_filename: props.document?.original_filename || undefined,
   file_size_bytes: props.document?.file_size_bytes || undefined,
 })
@@ -345,7 +359,7 @@ async function submit(status: 'draft' | 'published') {
 }
 .editor-actions {
   position: fixed;
-  inset: auto 0 0 220px;
+  inset: auto 0 0 294px;
   z-index: 20;
   min-height: 62px;
   display: flex;
@@ -384,7 +398,7 @@ async function submit(status: 'draft' | 'published') {
     min-height: 480px;
   }
 }
-@media (max-width: 720px) {
+@media (max-width: 760px) {
   .editor-shell {
     padding: 15px 14px 90px;
   }
@@ -403,7 +417,7 @@ async function submit(status: 'draft' | 'published') {
   }
   .editor-actions {
     left: 0;
-    bottom: 58px;
+    bottom: 0;
     padding: 8px 12px;
   }
   .editor-actions > span {
