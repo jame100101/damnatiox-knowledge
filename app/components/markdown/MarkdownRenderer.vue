@@ -1,11 +1,97 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { RotateCcw, X, ZoomIn, ZoomOut } from 'lucide-vue-next'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { renderMarkdown } from '~/utils/markdown'
 
 const props = defineProps<{ source: string }>()
 const root = ref<HTMLElement>()
+const viewerDialog = ref<HTMLElement>()
 const rendered = computed(() => renderMarkdown(props.source))
 const { theme } = useTheme()
+const viewerOpen = ref(false)
+const viewerSvg = ref('')
+const viewerTitle = ref('流程图')
+const zoom = ref(1)
+const panX = ref(0)
+const panY = ref(0)
+const isPanning = ref(false)
+const zoomPercent = computed(() => `${Math.round(zoom.value * 100)}%`)
+let previousBodyOverflow = ''
+let dragStartX = 0
+let dragStartY = 0
+
+function cssVariable(name: string, fallback: string) {
+  return (
+    getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback
+  )
+}
+
+function cloneSvgForViewer(svg: SVGSVGElement) {
+  const clone = svg.cloneNode(true) as SVGSVGElement
+  const prefix = `diagram-viewer-${Date.now()}-`
+  const ids = new Map<string, string>()
+
+  clone.querySelectorAll<HTMLElement>('[id]').forEach((element) => {
+    const oldId = element.id
+    const newId = `${prefix}${oldId}`
+    ids.set(oldId, newId)
+    element.id = newId
+  })
+
+  clone.querySelectorAll<HTMLElement>('*').forEach((element) => {
+    for (const attribute of [...element.attributes]) {
+      let value = attribute.value
+      ids.forEach((newId, oldId) => {
+        value = value.replaceAll(`url(#${oldId})`, `url(#${newId})`)
+        if (value === `#${oldId}`) value = `#${newId}`
+      })
+      if (value !== attribute.value) element.setAttribute(attribute.name, value)
+    }
+  })
+
+  clone.querySelectorAll('style').forEach((style) => {
+    let value = style.textContent || ''
+    ids.forEach((newId, oldId) => {
+      value = value.replaceAll(`#${oldId}`, `#${newId}`)
+    })
+    style.textContent = value
+  })
+
+  clone.removeAttribute('width')
+  clone.removeAttribute('height')
+  clone.style.width = ''
+  clone.style.maxWidth = ''
+  clone.style.height = ''
+  clone.setAttribute('preserveAspectRatio', 'xMidYMid meet')
+  return clone.outerHTML
+}
+
+function prepareDiagram(node: HTMLElement, index: number) {
+  const svg = node.querySelector<SVGSVGElement>('svg')
+  if (!svg) return
+
+  node.classList.add('mermaid-interactive')
+  const label = `放大查看流程图 ${index + 1}`
+  let button = node.querySelector<HTMLButtonElement>('.mermaid-open-button')
+  if (!button) {
+    button = document.createElement('button')
+    button.type = 'button'
+    button.className = 'mermaid-open-button'
+    button.innerHTML =
+      '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="m21 3-7 7"/><path d="m3 21 7-7"/><path d="M9 21H3v-6"/></svg><span>放大查看</span>'
+    node.append(button)
+  }
+  button.setAttribute('aria-label', label)
+  button.title = `${label}（也可直接点击图表）`
+
+  const viewBox = svg.viewBox?.baseVal
+  if (viewBox?.width && viewBox?.height && viewBox.width / viewBox.height >= 3) {
+    const preferredWidth = Math.min(Math.max(viewBox.width, 1100), 1800)
+    svg.style.width = `${preferredWidth}px`
+    svg.style.maxWidth = 'none'
+    svg.style.height = 'auto'
+  }
+}
 
 async function enhance() {
   await nextTick()
@@ -21,25 +107,221 @@ async function enhance() {
   const nodes = root.value.querySelectorAll<HTMLElement>('.mermaid')
   if (nodes.length) {
     const mermaid = (await import('mermaid')).default
+    const isLight = theme.value === 'light'
     mermaid.initialize({
       startOnLoad: false,
-      theme: theme.value === 'light' ? 'neutral' : 'dark',
+      theme: isLight ? 'base' : 'dark',
       securityLevel: 'strict',
+      themeVariables: isLight
+        ? {
+            background: cssVariable('--kb-diagram-bg', '#ffffff'),
+            primaryColor: cssVariable('--kb-surface-secondary', '#e9eee8'),
+            primaryTextColor: cssVariable('--kb-text', '#152019'),
+            primaryBorderColor: cssVariable('--kb-control-border', '#87958b'),
+            secondaryColor: cssVariable('--kb-surface-hover', '#e1e8e1'),
+            secondaryTextColor: cssVariable('--kb-text', '#152019'),
+            secondaryBorderColor: cssVariable('--kb-control-border', '#87958b'),
+            tertiaryColor: cssVariable('--kb-bg', '#f3f6f1'),
+            tertiaryTextColor: cssVariable('--kb-text', '#152019'),
+            tertiaryBorderColor: cssVariable('--kb-border-strong', '#9aa79e'),
+            lineColor: cssVariable('--kb-icon', '#536259'),
+            textColor: cssVariable('--kb-text', '#152019'),
+            edgeLabelBackground: cssVariable('--kb-surface', '#ffffff'),
+            clusterBkg: cssVariable('--kb-bg', '#f3f6f1'),
+            clusterBorder: cssVariable('--kb-border-strong', '#9aa79e'),
+            fontFamily: 'Inter, "Noto Sans SC", sans-serif',
+          }
+        : undefined,
     })
     await mermaid.run({ nodes: [...nodes], suppressErrors: true })
+    nodes.forEach(prepareDiagram)
   }
 }
 
-onMounted(enhance)
+function openDiagram(node: HTMLElement) {
+  const svg = node.querySelector<SVGSVGElement>('svg')
+  if (!svg) return
+
+  const diagrams = root.value
+    ? [...root.value.querySelectorAll('.mermaid-interactive')]
+    : []
+  const index = Math.max(0, diagrams.indexOf(node))
+  viewerTitle.value = `流程图 ${index + 1}`
+  viewerSvg.value = cloneSvgForViewer(svg)
+  zoom.value = 1
+  panX.value = 0
+  panY.value = 0
+  viewerOpen.value = true
+  previousBodyOverflow = document.body.style.overflow
+  document.body.style.overflow = 'hidden'
+  nextTick(() => viewerDialog.value?.focus())
+}
+
+function closeViewer() {
+  viewerOpen.value = false
+  viewerSvg.value = ''
+  isPanning.value = false
+  document.body.style.overflow = previousBodyOverflow
+}
+
+function handleRootClick(event: MouseEvent) {
+  const target = event.target
+  if (!(target instanceof Element)) return
+  const trigger = target.closest('.mermaid-open-button, .mermaid-interactive svg')
+  const diagram = target.closest<HTMLElement>('.mermaid-interactive')
+  if (trigger && diagram) openDiagram(diagram)
+}
+
+function setZoom(value: number) {
+  zoom.value = Math.min(4, Math.max(0.5, Number(value.toFixed(2))))
+}
+
+function resetView() {
+  zoom.value = 1
+  panX.value = 0
+  panY.value = 0
+}
+
+function handleWheel(event: WheelEvent) {
+  setZoom(zoom.value + (event.deltaY < 0 ? 0.15 : -0.15))
+}
+
+function startPan(event: PointerEvent) {
+  if (event.button !== 0) return
+  isPanning.value = true
+  dragStartX = event.clientX - panX.value
+  dragStartY = event.clientY - panY.value
+  ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
+}
+
+function movePan(event: PointerEvent) {
+  if (!isPanning.value) return
+  panX.value = event.clientX - dragStartX
+  panY.value = event.clientY - dragStartY
+}
+
+function stopPan(event: PointerEvent) {
+  if (!isPanning.value) return
+  isPanning.value = false
+  const target = event.currentTarget as HTMLElement
+  if (target.hasPointerCapture(event.pointerId))
+    target.releasePointerCapture(event.pointerId)
+}
+
+function handleViewerKeydown(event: KeyboardEvent) {
+  if (!viewerOpen.value) return
+  if (event.key === 'Escape') closeViewer()
+  if (event.key === '+' || event.key === '=') setZoom(zoom.value + 0.25)
+  if (event.key === '-') setZoom(zoom.value - 0.25)
+  if (event.key === '0') resetView()
+}
+
+onMounted(() => {
+  enhance()
+  window.addEventListener('keydown', handleViewerKeydown)
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleViewerKeydown)
+  if (viewerOpen.value) document.body.style.overflow = previousBodyOverflow
+})
 watch(rendered, enhance)
 watch(theme, async () => {
+  closeViewer()
   if (root.value) root.value.innerHTML = rendered.value
   await enhance()
 })
 </script>
 
 <template>
-  <article ref="root" class="markdown-body" v-html="rendered" />
+  <!-- eslint-disable vue/no-v-html -->
+  <article
+    ref="root"
+    class="markdown-body"
+    @click="handleRootClick"
+    v-html="rendered"
+  />
+
+  <Teleport to="body">
+    <Transition name="diagram-viewer">
+      <section
+        v-if="viewerOpen"
+        ref="viewerDialog"
+        class="diagram-viewer-overlay"
+        role="dialog"
+        aria-modal="true"
+        :aria-label="`${viewerTitle}放大视图`"
+        tabindex="-1"
+        @pointerdown.self="closeViewer"
+      >
+        <div class="diagram-viewer-shell">
+          <header class="diagram-viewer-header">
+            <div>
+              <span>DIAGRAM VIEWER</span>
+              <strong>{{ viewerTitle }}</strong>
+            </div>
+            <button
+              type="button"
+              aria-label="关闭流程图"
+              title="关闭（Esc）"
+              @click="closeViewer"
+            >
+              <X :size="19" />
+            </button>
+          </header>
+
+          <div
+            class="diagram-viewer-viewport"
+            :class="{ dragging: isPanning }"
+            @wheel.prevent="handleWheel"
+            @pointerdown="startPan"
+            @pointermove="movePan"
+            @pointerup="stopPan"
+            @pointercancel="stopPan"
+            @dblclick="resetView"
+          >
+            <div
+              class="diagram-viewer-canvas"
+              :style="{
+                transform: `translate(${panX}px, ${panY}px) scale(${zoom})`,
+              }"
+              v-html="viewerSvg"
+            />
+          </div>
+
+          <footer class="diagram-viewer-footer">
+            <span>滚轮缩放 · 拖拽移动 · 双击复位</span>
+            <div class="diagram-viewer-controls">
+              <button
+                type="button"
+                aria-label="缩小流程图"
+                title="缩小（-）"
+                @click="setZoom(zoom - 0.25)"
+              >
+                <ZoomOut :size="18" />
+              </button>
+              <output aria-live="polite">{{ zoomPercent }}</output>
+              <button
+                type="button"
+                aria-label="放大流程图"
+                title="放大（+）"
+                @click="setZoom(zoom + 0.25)"
+              >
+                <ZoomIn :size="18" />
+              </button>
+              <button
+                type="button"
+                aria-label="复位流程图"
+                title="复位（0）"
+                @click="resetView"
+              >
+                <RotateCcw :size="17" />
+              </button>
+            </div>
+          </footer>
+        </div>
+      </section>
+    </Transition>
+  </Teleport>
 </template>
 
 <style>
@@ -166,14 +448,234 @@ watch(theme, async () => {
   margin-right: 8px;
 }
 .markdown-body .mermaid {
+  position: relative;
   padding: 18px;
   border: 1px solid var(--kb-border);
   border-radius: var(--kb-radius-md);
-  background: var(--kb-code-bg);
+  background: var(--kb-diagram-bg);
   overflow: auto;
   text-align: center;
 }
+.markdown-body .mermaid-interactive {
+  padding-top: 52px;
+  cursor: zoom-in;
+}
+.markdown-body .mermaid svg {
+  display: block;
+  min-width: 100%;
+  margin: 0 auto;
+}
+.markdown-body .mermaid-open-button {
+  position: absolute;
+  z-index: 2;
+  top: 10px;
+  right: 10px;
+  width: max-content;
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 5px 9px;
+  border: 1px solid var(--kb-control-border);
+  border-radius: var(--kb-radius-sm);
+  background: var(--kb-panel-bg);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 12%);
+  color: var(--kb-text);
+  font-size: 12px;
+  font-weight: 650;
+  cursor: zoom-in;
+}
+.markdown-body .mermaid-open-button svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.markdown-body .mermaid-open-button:hover {
+  border-color: var(--kb-accent);
+  color: var(--kb-accent);
+}
 .markdown-body .katex {
   color: var(--kb-text);
+}
+
+.diagram-viewer-overlay {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: clamp(12px, 3vw, 34px);
+  background: rgb(5 8 6 / 78%);
+  backdrop-filter: blur(8px);
+}
+.diagram-viewer-overlay:focus {
+  outline: none;
+}
+.diagram-viewer-shell {
+  width: min(1500px, 100%);
+  height: min(900px, 100%);
+  min-height: 360px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+  border: 1px solid var(--kb-border-strong);
+  border-radius: var(--kb-radius-lg);
+  background: var(--kb-surface);
+  box-shadow: 0 30px 90px rgb(0 0 0 / 38%);
+}
+.diagram-viewer-header,
+.diagram-viewer-footer {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 10px 14px 10px 18px;
+  background: var(--kb-panel-bg);
+}
+.diagram-viewer-header {
+  border-bottom: 1px solid var(--kb-border);
+}
+.diagram-viewer-header > div {
+  display: grid;
+  gap: 3px;
+}
+.diagram-viewer-header span {
+  color: var(--kb-accent);
+  font:
+    700 9px/1.2 'SFMono-Regular',
+    Consolas,
+    monospace;
+  letter-spacing: 0.14em;
+}
+.diagram-viewer-header strong {
+  color: var(--kb-text);
+  font-size: 14px;
+}
+.diagram-viewer-header button,
+.diagram-viewer-controls button {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  padding: 0;
+  border: 1px solid var(--kb-border);
+  border-radius: var(--kb-radius-sm);
+  background: var(--kb-surface-secondary);
+  color: var(--kb-icon-strong);
+  cursor: pointer;
+}
+.diagram-viewer-header button:hover,
+.diagram-viewer-controls button:hover {
+  border-color: var(--kb-control-border);
+  background: var(--kb-surface-hover);
+  color: var(--kb-text);
+}
+.diagram-viewer-viewport {
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding: 32px;
+  background:
+    radial-gradient(circle, var(--kb-border) 1px, transparent 1px) 0 0 / 20px 20px,
+    var(--kb-bg);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.diagram-viewer-viewport.dragging {
+  cursor: grabbing;
+}
+.diagram-viewer-canvas {
+  width: min(1380px, calc(100vw - 120px));
+  will-change: transform;
+  transform-origin: center;
+  transition: transform 100ms ease-out;
+}
+.diagram-viewer-viewport.dragging .diagram-viewer-canvas {
+  transition: none;
+}
+.diagram-viewer-canvas svg {
+  width: 100%;
+  max-width: none;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+.diagram-viewer-footer {
+  border-top: 1px solid var(--kb-border);
+  color: var(--kb-text-subtle);
+  font-size: 11px;
+}
+.diagram-viewer-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.diagram-viewer-controls output {
+  width: 54px;
+  text-align: center;
+  color: var(--kb-text);
+  font:
+    12px/1 'SFMono-Regular',
+    Consolas,
+    monospace;
+}
+.diagram-viewer-enter-active,
+.diagram-viewer-leave-active {
+  transition: opacity 160ms ease;
+}
+.diagram-viewer-enter-active .diagram-viewer-shell,
+.diagram-viewer-leave-active .diagram-viewer-shell {
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+.diagram-viewer-enter-from,
+.diagram-viewer-leave-to,
+.diagram-viewer-enter-from .diagram-viewer-shell,
+.diagram-viewer-leave-to .diagram-viewer-shell {
+  opacity: 0;
+}
+.diagram-viewer-enter-from .diagram-viewer-shell,
+.diagram-viewer-leave-to .diagram-viewer-shell {
+  transform: translateY(8px) scale(0.985);
+}
+
+@media (max-width: 720px) {
+  .diagram-viewer-overlay {
+    padding: 0;
+  }
+  .diagram-viewer-shell {
+    height: 100%;
+    border: 0;
+    border-radius: 0;
+  }
+  .diagram-viewer-canvas {
+    width: 1100px;
+  }
+  .diagram-viewer-footer > span {
+    display: none;
+  }
+  .diagram-viewer-footer {
+    justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .diagram-viewer-enter-active,
+  .diagram-viewer-leave-active,
+  .diagram-viewer-enter-active .diagram-viewer-shell,
+  .diagram-viewer-leave-active .diagram-viewer-shell,
+  .diagram-viewer-canvas {
+    transition: none;
+  }
 }
 </style>

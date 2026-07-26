@@ -1,11 +1,38 @@
-import { mount } from '@vue/test-utils'
-import { ref } from 'vue'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { flushPromises, mount } from '@vue/test-utils'
+import { nextTick, ref } from 'vue'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import MarkdownRenderer from '~/components/markdown/MarkdownRenderer.vue'
+
+const mermaidMocks = vi.hoisted(() => ({
+  initialize: vi.fn(),
+  run: vi.fn(),
+}))
+
+vi.mock('mermaid', () => ({
+  default: mermaidMocks,
+}))
 
 describe('MarkdownRenderer', () => {
   beforeEach(() => {
     vi.stubGlobal('useTheme', () => ({ theme: ref('dark') }))
+    mermaidMocks.initialize.mockReset()
+    mermaidMocks.run.mockReset()
+    mermaidMocks.run.mockImplementation(async ({ nodes }: { nodes: HTMLElement[] }) => {
+      nodes.forEach((node) => {
+        node.dataset.processed = 'true'
+        node.innerHTML = `
+          <svg viewBox="0 0 1200 140" width="100%" role="img">
+            <defs><marker id="arrow"><path d="M0 0L10 5L0 10Z" /></marker></defs>
+            <path d="M10 70H1190" marker-end="url(#arrow)" />
+          </svg>
+        `
+      })
+    })
+  })
+
+  afterEach(() => {
+    document.body.innerHTML = ''
+    document.body.style.overflow = ''
   })
 
   it('renders a preview while stripping malicious markup', () => {
@@ -18,5 +45,43 @@ describe('MarkdownRenderer', () => {
     expect(wrapper.find('h2').text()).toBe('Preview')
     expect(wrapper.html()).not.toContain('<script')
     expect(wrapper.html()).not.toContain('onerror')
+  })
+
+  it('opens Mermaid diagrams in a zoomable viewer', async () => {
+    const wrapper = mount(MarkdownRenderer, {
+      attachTo: document.body,
+      props: {
+        source: '```mermaid\nflowchart LR\nA[Observe] --> B[Think] --> C[Act]\n```',
+      },
+    })
+
+    await flushPromises()
+
+    const openButton = (
+      wrapper.element as HTMLElement
+    ).querySelector<HTMLButtonElement>('.mermaid-open-button')
+    expect(openButton?.textContent).toBe('放大查看')
+    expect(openButton?.getAttribute('aria-label')).toBe('放大查看流程图 1')
+
+    openButton?.click()
+    await nextTick()
+
+    const dialog = document.body.querySelector<HTMLElement>('.diagram-viewer-overlay')
+    expect(dialog?.getAttribute('role')).toBe('dialog')
+    expect(dialog?.querySelector('.diagram-viewer-canvas svg')).toBeTruthy()
+    expect(document.body.style.overflow).toBe('hidden')
+
+    document.body
+      .querySelector<HTMLButtonElement>('button[aria-label="放大流程图"]')
+      ?.click()
+    await nextTick()
+    expect(document.body.querySelector('output')?.textContent).toBe('125%')
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    await nextTick()
+    expect(document.body.querySelector('.diagram-viewer-overlay')).toBeNull()
+    expect(document.body.style.overflow).toBe('')
+
+    wrapper.unmount()
   })
 })

@@ -20,5 +20,5 @@ defineProps<{ items: Breadcrumb[] }>()
 .breadcrumbs { display: flex; align-items: center; gap: 5px; color: var(--kb-text-subtle); font-size: 12px; overflow: hidden; }
 .breadcrumbs a { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color 150ms; }
 .breadcrumbs a:hover, .breadcrumbs a[aria-current="page"] { color: var(--kb-text-muted); }
-.breadcrumbs svg { flex: none; }
+.breadcrumbs svg { flex: none; color: var(--kb-icon); }
 </style>

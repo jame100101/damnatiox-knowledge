@@ -40,7 +40,7 @@ onMounted(() => {
   border: 1px solid transparent;
   border-radius: var(--kb-radius-sm);
   background: transparent;
-  color: var(--kb-text-muted);
+  color: var(--kb-icon);
   cursor: pointer;
   transition:
     color 150ms ease,

@@ -43,6 +43,7 @@ onUnmounted(() => observer?.disconnect())
 <style scoped>
 .toc { position: sticky; top: 24px; }
 .toc-title { display: flex; align-items: center; gap: 7px; margin-bottom: 13px; color: var(--kb-text-muted); font-size: 12px; font-weight: 700; }
+.toc-title svg { color: var(--kb-icon); }
 nav { display: grid; gap: 2px; border-left: 1px solid var(--kb-border); }
 nav a { padding: 5px 8px 5px 13px; color: var(--kb-text-subtle); font-size: 12px; line-height: 1.4; transition: color 140ms, border 140ms; border-left: 1px solid transparent; margin-left: -1px; }
 nav a:hover, nav a.active { color: var(--kb-text); }

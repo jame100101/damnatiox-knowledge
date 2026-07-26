@@ -94,11 +94,11 @@ li, ul { list-style: none; margin: 0; padding: 0; }
 }
 .tree-row:hover, .tree-row.active { background: var(--kb-surface-hover); color: var(--kb-text); }
 .tree-row.active { box-shadow: inset 2px 0 var(--kb-accent); }
-.tree-toggle { width: 18px; height: 24px; display: grid; place-items: center; border: 0; padding: 0; background: none; color: var(--kb-text-subtle); cursor: pointer; }
+.tree-toggle { width: 18px; height: 24px; display: grid; place-items: center; border: 0; padding: 0; background: none; color: var(--kb-icon); cursor: pointer; }
 .tree-toggle:disabled { opacity: 0; }
 .tree-toggle svg { transition: transform 140ms; }
 .tree-toggle .rotated { transform: rotate(90deg); }
-.tree-icon { color: var(--kb-text-subtle); flex: none; }
+.tree-icon { color: var(--kb-icon); flex: none; }
 .tree-label { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tree-count { font: 10px/1.4 monospace; color: var(--kb-text-subtle); }
 .tree-document {
@@ -108,7 +108,7 @@ li, ul { list-style: none; margin: 0; padding: 0; }
   gap: 7px;
   padding: 5px 8px 5px calc(43px + var(--depth) * 13px);
   border-radius: var(--kb-radius-sm);
-  color: var(--kb-text-subtle);
+  color: var(--kb-text-muted);
   font-size: 12px;
   transition: background 140ms, color 140ms;
 }

@@ -178,7 +178,7 @@ watch(
 .sidebar-footer button {
   border: 0;
   background: transparent;
-  color: var(--kb-text-muted);
+  color: var(--kb-icon);
   cursor: pointer;
 }
 .search-trigger {
@@ -188,10 +188,10 @@ watch(
   gap: 8px;
   margin: 0 12px 14px;
   padding: 0 10px;
-  border: 1px solid var(--kb-border);
+  border: 1px solid var(--kb-control-border);
   border-radius: var(--kb-radius-sm);
   background: var(--kb-bg);
-  color: var(--kb-text-subtle);
+  color: var(--kb-text-muted);
   cursor: pointer;
   text-align: left;
 }
@@ -207,6 +207,8 @@ watch(
   border: 1px solid var(--kb-border);
   border-radius: 3px;
   padding: 1px 4px;
+  background: var(--kb-shortcut-bg);
+  color: var(--kb-shortcut-text);
 }
 .sidebar-label {
   display: flex;
