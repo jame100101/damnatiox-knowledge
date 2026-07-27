@@ -69,13 +69,30 @@ sequenceDiagram
   end
 ```
 
-## 4. 实践与验证
+## 4. 最小可运行示例
+
+下面的示例只保留关键路径。把它放入对应版本的最小工程，先运行测试或命令确认行为，再逐步加入重试、超时、监控和异常分支。
+
+```java
+@Service
+class TransferService {
+  @Transactional
+  public void transfer(long from, long to, BigDecimal amount) {
+    accounts.debit(from, amount);
+    accounts.credit(to, amount);
+  }
+}
+
+// 事务方法应从代理外部调用；同类自调用不会经过代理拦截。
+```
+
+## 5. 实践与验证
 
 1. 制造 self-invocation 导致事务未生效，再通过服务拆分修复。
 2. 验证 REQUIRED/REQUIRES_NEW 在内外层异常组合下的提交结果。
 3. 实现 transactional outbox 并测试进程重启后的重放。
 
-## 5. 掌握检查
+## 6. 掌握检查
 
 - [ ] 能解释代理式 AOP 的 join point 限制。
 - [ ] 能说明事务注解失效的常见原因。

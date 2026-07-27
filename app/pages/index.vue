@@ -122,11 +122,11 @@ const openSearch = () =>
 .workspace-header { display: grid; grid-template-columns: 1fr minmax(310px, 400px); align-items: end; gap: 60px; padding-bottom: 42px; border-bottom: 1px solid var(--kb-border); }
 h1 { margin: 11px 0 12px; max-width: 700px; font-size: clamp(34px, 5vw, 60px); line-height: 1; letter-spacing: -.055em; }
 .workspace-header p { max-width: 660px; margin: 0; color: var(--kb-text-muted); line-height: 1.7; }
-.command-search { height: 48px; display: flex; align-items: center; gap: 10px; padding: 0 12px; border: 1px solid var(--kb-control-border); border-radius: var(--kb-radius-md); background: var(--kb-surface); color: var(--kb-text-muted); cursor: pointer; box-shadow: var(--kb-elevated-shadow); }
+.command-search { height: 48px; display: flex; align-items: center; gap: 10px; padding: 0 12px; border: 1px solid var(--kb-control-border); border-radius: var(--kb-radius-md); background: var(--kb-home-surface); color: var(--kb-text-muted); cursor: pointer; box-shadow: var(--kb-elevated-shadow); backdrop-filter: blur(8px) saturate(110%); }
 .command-search:hover { background: var(--kb-surface-hover); }
 .command-search span { flex: 1; text-align: left; font-size: 13px; }
 .command-search kbd { border: 1px solid var(--kb-border-strong); border-radius: 4px; padding: 3px 6px; color: var(--kb-shortcut-text); font: 10px monospace; background: var(--kb-shortcut-bg); }
-.metrics { display: grid; grid-template-columns: repeat(4, 1fr); margin: 30px 0 70px; border: 1px solid var(--kb-border); border-radius: var(--kb-radius-md); background: var(--kb-surface); }
+.metrics { display: grid; grid-template-columns: repeat(4, 1fr); margin: 30px 0 70px; border: 1px solid var(--kb-border); border-radius: var(--kb-radius-md); background: var(--kb-home-surface); backdrop-filter: blur(8px) saturate(110%); }
 .metrics > div { min-height: 75px; display: flex; align-items: center; gap: 12px; padding: 16px 20px; border-right: 1px solid var(--kb-border); color: var(--kb-icon); }
 .metrics > div:last-child { border: 0; }
 .metrics span { display: grid; gap: 3px; }
@@ -137,7 +137,7 @@ h1 { margin: 11px 0 12px; max-width: 700px; font-size: clamp(34px, 5vw, 60px); l
 h2 { margin: 0; font-size: 20px; letter-spacing: -.025em; }
 .section-heading > span { font-size: 12px; }
 .folder-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-.folder-card { min-height: 208px; display: flex; flex-direction: column; padding: 18px; border: 1px solid var(--kb-border); border-radius: var(--kb-radius-md); background: var(--kb-surface); transition: background 160ms, border 160ms, transform 160ms; }
+.folder-card { min-height: 208px; display: flex; flex-direction: column; padding: 18px; border: 1px solid var(--kb-border); border-radius: var(--kb-radius-md); background: var(--kb-home-surface); backdrop-filter: blur(8px) saturate(110%); transition: background 160ms, border 160ms, transform 160ms; }
 .folder-card:hover { background: var(--kb-surface-hover); border-color: var(--kb-border-strong); transform: translateY(-2px); }
 .folder-card-top { display: flex; align-items: center; justify-content: space-between; color: var(--kb-icon); }
 .folder-icon { width: 37px; height: 37px; display: grid; place-items: center; border: 1px solid var(--kb-icon-tile-border); border-radius: 8px; background: var(--kb-icon-tile-bg); color: var(--kb-accent); }
@@ -145,6 +145,7 @@ h2 { margin: 0; font-size: 20px; letter-spacing: -.025em; }
 .folder-card p { margin: 0; flex: 1; color: var(--kb-text-muted); font-size: 13px; line-height: 1.55; }
 .folder-meta { display: flex; gap: 14px; margin-top: 16px; color: var(--kb-text-subtle); font: 10px monospace; }
 .home-columns { display: grid; grid-template-columns: 1.5fr 1fr; gap: 28px; margin-top: 58px; }
+.home-columns .surface { background: var(--kb-home-surface); backdrop-filter: blur(8px) saturate(110%); }
 .recent-list { padding: 5px; }
 .recent-list a { min-height: 68px; display: grid; grid-template-columns: 34px 1fr 45px; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 7px; }
 .recent-list a:hover { background: var(--kb-surface-hover); }

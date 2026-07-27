@@ -90,7 +90,20 @@ JDK HttpClient 支持同步/异步、HTTP/1.1、HTTP/2，JDK 26 加入 HTTP/3。
 
 **常见误区：** 关闭证书校验解决环境问题，或对支付 POST 无条件重试。
 
+## 3.9 最小可运行示例
 
+```java
+HttpClient client = HttpClient.newBuilder()
+    .connectTimeout(Duration.ofSeconds(2))
+    .build();
+HttpRequest request = HttpRequest.newBuilder(URI.create("https://example.test/health"))
+    .timeout(Duration.ofSeconds(3))
+    .header("Accept", "application/json")
+    .GET()
+    .build();
+HttpResponse<String> response =
+    client.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+```
 
 ## 4. 现代 Java 校准
 

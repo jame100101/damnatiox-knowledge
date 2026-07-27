@@ -106,8 +106,12 @@ function prepareDiagram(node: HTMLElement, index: number) {
   button.title = `${label} · ${t('diagramOpenHint')}`
 
   const viewBox = svg.viewBox?.baseVal
-  if (viewBox?.width && viewBox?.height && viewBox.width / viewBox.height >= 3) {
-    const preferredWidth = Math.min(Math.max(viewBox.width, 1100), 1800)
+  if (viewBox?.width && viewBox?.height) {
+    const aspectRatio = viewBox.width / viewBox.height
+    const preferredWidth =
+      aspectRatio >= 3
+        ? Math.min(Math.max(viewBox.width, 1100), 1800)
+        : Math.min(Math.max(viewBox.width, 320), 1000)
     svg.style.width = `${preferredWidth}px`
     svg.style.maxWidth = 'none'
     svg.style.height = 'auto'
@@ -218,12 +222,29 @@ async function enhance() {
   if (nodes.length) {
     const mermaid = (await import('mermaid')).default
     const isLight = theme.value === 'light'
+    const sharedThemeVariables = {
+      fontFamily: 'Inter, "Noto Sans SC", sans-serif',
+      fontSize: '13px',
+    }
     mermaid.initialize({
       startOnLoad: false,
       theme: isLight ? 'base' : 'dark',
       securityLevel: 'strict',
+      flowchart: {
+        useMaxWidth: false,
+        htmlLabels: true,
+        nodeSpacing: 34,
+        rankSpacing: 40,
+        padding: 10,
+      },
+      sequence: {
+        useMaxWidth: false,
+        diagramMarginX: 18,
+        diagramMarginY: 18,
+      },
       themeVariables: isLight
         ? {
+            ...sharedThemeVariables,
             background: cssVariable('--kb-diagram-bg', '#ffffff'),
             primaryColor: cssVariable('--kb-surface-secondary', '#e9eee8'),
             primaryTextColor: cssVariable('--kb-text', '#152019'),
@@ -239,9 +260,8 @@ async function enhance() {
             edgeLabelBackground: cssVariable('--kb-surface', '#ffffff'),
             clusterBkg: cssVariable('--kb-bg', '#f3f6f1'),
             clusterBorder: cssVariable('--kb-border-strong', '#9aa79e'),
-            fontFamily: 'Inter, "Noto Sans SC", sans-serif',
           }
-        : undefined,
+        : sharedThemeVariables,
     })
     await mermaid.run({ nodes: [...nodes], suppressErrors: true })
     nodes.forEach(prepareDiagram)
@@ -638,7 +658,11 @@ watch([theme, locale], async () => {
 }
 .markdown-body .mermaid svg {
   display: block;
-  min-width: 100%;
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  max-height: 620px;
+  height: auto;
   margin: 0 auto;
 }
 .markdown-body .mermaid-open-button {

@@ -68,13 +68,28 @@ sequenceDiagram
   D-->>C: message conversion response
 ```
 
-## 4. 实践与验证
+## 4. 最小可运行示例
+
+下面的示例只保留关键路径。把它放入对应版本的最小工程，先运行测试或命令确认行为，再逐步加入重试、超时、监控和异常分支。
+
+```java
+@RestController
+@RequestMapping("/api/orders")
+final class OrderController {
+  @GetMapping("/{id}")
+  OrderView find(@PathVariable long id) {
+    return service.find(id);
+  }
+}
+```
+
+## 5. 实践与验证
 
 1. 为同一接口分别编写 Filter、Interceptor 和 Controller 日志，观察顺序。
 2. 自定义 HandlerMethodArgumentResolver 解析当前租户。
 3. 压测慢下游下容器线程池、虚拟线程与连接池的关系。
 
-## 5. 掌握检查
+## 6. 掌握检查
 
 - [ ] 能画出 Tomcat 到 Controller 的调用链。
 - [ ] 能区分 Filter 与 Interceptor。

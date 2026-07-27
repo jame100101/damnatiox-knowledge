@@ -77,9 +77,9 @@ const report = {
 }
 if (
   report.publicFolders !== 27 ||
-  report.publicDocuments !== 74 ||
+  report.publicDocuments !== 100 ||
   report.foundationDocuments !== 14 ||
-  report.contentCharacters < 130_000
+  report.contentCharacters < 200_000
 ) {
   throw new Error(`Unexpected public import result: ${JSON.stringify(report)}`)
 }

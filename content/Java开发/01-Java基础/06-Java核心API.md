@@ -104,7 +104,18 @@ Pattern 是编译后的正则，可复用；Matcher 保存一次匹配状态。`
 
 **常见误区：** 用正则解析完整 HTML/JSON，或在循环中重复编译同一表达式。
 
+## 3.9 最小可运行示例
 
+```java
+public final class Example {
+  private Example() {}
+
+  public static <T> List<T> immutableCopy(Collection<? extends T> source) {
+    Objects.requireNonNull(source, "source");
+    return List.copyOf(source);
+  }
+}
+```
 
 ## 4. 现代 Java 校准
 

@@ -2625,7 +2625,7 @@ export const foundationReading = {
 
 export const overviewMarkdown = `# Java 后端学习路线总览（2026）
 
-> 主线版本：JDK 25 LTS。JDK 26 用于学习最新功能版本及 API；框架与依赖按项目兼容矩阵选择。路线整合本地 14 份 Java 课件、JavaDevelop 笔记、官方文档、roadmap.sh 与 JavaGuide 的学习顺序，并排除了与 Java 后端主线无关的内容。
+> 主线版本：JDK 25 LTS。JDK 26 用于学习最新功能版本及 API；框架与依赖按项目兼容矩阵选择。路线整合本地 14 份 Java 课件、JavaDevelop 笔记、黑马程序员课程图谱、尚硅谷课程目录、roadmap.sh 与 JavaGuide 的学习顺序，并排除了与 Java 后端主线无关的内容。
 
 ## 1. 路线目标
 
@@ -2672,7 +2672,24 @@ flowchart TD
 
 以测试金字塔、契约测试、Testcontainers、性能测试、安全验证、容器、Kubernetes、CI/CD、OpenTelemetry 和 SLO 形成上线闭环。
 
-## 4. 每阶段统一验收
+## 4. 主流课程路线对照与补齐结果
+
+| 参考路线 | 重点顺序 | 本路线的映射与补齐 |
+|---|---|---|
+| 黑马程序员 Java 学习路线 | Java SE → JavaWeb → SSM → Spring Boot → 微服务与项目；专题覆盖 JVM、设计模式、MyBatis-Plus、Redis、MQ、Elasticsearch、Linux/Docker | 保留从语言到项目的渐进顺序；补入独立的数据结构与算法、设计模式、JVM、MyBatis-Plus、Spring Cloud Alibaba、Seata、Sentinel、SkyWalking 文档 |
+| 尚硅谷 Java 课程 | Java 基础、数据结构、JUC、JVM、数据库、SSM、Spring Boot、微服务与项目 | 强化字节码/类加载/GC、并发、数据结构、源码与工程诊断；用阶段项目替代只看视频的完成标准 |
+| JavaGuide | Java 基础、集合、JVM、并发、数据库、框架、分布式、高性能与系统设计 | 对齐核心知识，并增加 Spring Batch/Quartz、OpenAPI、文件/邮件/WebSocket、全链路测试和现代前端 |
+| roadmap.sh Backend / Spring Boot | Internet/HTTP、语言、版本控制、数据库、API、安全、测试、缓存、容器、Web 框架与可观测性 | 将横向清单重排为可执行阶段，每阶段加入导学、代码、失败边界、验收和推荐阅读 |
+
+**对照后的新增主线：**
+
+1. 工程基础增加数据结构与算法、SOLID/UML/设计模式、JVM 内存/类加载/字节码/GC。
+2. 框架阶段增加异步、定时任务、Quartz、Spring Batch，以及 OpenAPI、文件、邮件和 WebSocket。
+3. 数据与微服务阶段增加 MyBatis-Plus、Spring Cloud/Alibaba 组件图、Seata/Sentinel/SkyWalking 的适用边界。
+4. 性能阶段增加 Caffeine 本地缓存和 L1/L2 多级缓存。
+5. 全栈阶段把 HTML、CSS、JavaScript、TypeScript、Vue、测试和性能拆成可独立学习的完整模块。
+
+## 5. 每阶段统一验收
 
 1. **知识：** 能解释术语、前提、失败模式和技术边界。
 2. **代码：** 有最小示例、自动化测试、静态检查和可重复构建。
@@ -2681,7 +2698,7 @@ flowchart TD
 5. **安全：** 有身份、授权、输入、秘密、依赖和审计检查。
 6. **交付：** 有镜像、部署、回滚、runbook 和故障演练证据。
 
-## 5. 推荐学习节奏
+## 6. 推荐学习节奏
 
 | 周期 | 内容 | 可验证交付 |
 |---|---|---|
@@ -2692,7 +2709,7 @@ flowchart TD
 | 23–26 周 | 安全、测试、云原生、可观测 | OIDC 服务、K8s 部署、SLO 仪表盘 |
 | 持续 | 项目阶梯 | 可演示、可部署、可复盘的作品集 |
 
-## 6. 正确性校验方法
+## 7. 正确性校验方法
 
 - 语言规则以 JLS/JVMS 和 Java API 为准；框架行为以当前 reference 与源码测试为准。
 - 数据库结论使用真实 schema、数据分布和 \`EXPLAIN ANALYZE\` 验证。
@@ -2707,4 +2724,7 @@ flowchart TD
 - [roadmap.sh Backend Roadmap](https://roadmap.sh/backend)
 - [roadmap.sh Spring Boot Roadmap](https://roadmap.sh/spring-boot)
 - [JavaGuide Java 学习路线](https://javaguide.cn/roadmap/java-roadmap.html)
+- [黑马程序员 Java 学习路线](https://yun.itheima.com/subject/javamap/index.html)
+- [黑马程序员 Java 课程图谱](https://yun.itheima.com/map/javaeetree)
+- [尚硅谷 Java 课程](https://atguigu.com/video/java/)
 `

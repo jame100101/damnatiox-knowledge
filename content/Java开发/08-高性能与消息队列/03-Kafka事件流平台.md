@@ -64,13 +64,30 @@ flowchart LR
   P2 --> C1
 ```
 
-## 4. 实践与验证
+## 4. 最小可运行示例
+
+下面的示例只保留关键路径。把它放入对应版本的最小工程，先运行测试或命令确认行为，再逐步加入重试、超时、监控和异常分支。
+
+```java
+@Service
+class TransferService {
+  @Transactional
+  public void transfer(long from, long to, BigDecimal amount) {
+    accounts.debit(from, amount);
+    accounts.credit(to, amount);
+  }
+}
+
+// 事务方法应从代理外部调用；同类自调用不会经过代理拦截。
+```
+
+## 5. 实践与验证
 
 1. 建立三分区 topic，验证同 key 顺序和跨分区无全序。
 2. 模拟消费者再均衡和处理后未提交 offset。
 3. 比较普通 producer、幂等 producer 与事务 producer 的边界。
 
-## 5. 掌握检查
+## 6. 掌握检查
 
 - [ ] 能设计分区 key。
 - [ ] 能解释 ISR 与 ack。

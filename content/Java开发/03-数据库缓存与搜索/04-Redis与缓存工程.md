@@ -78,13 +78,30 @@ sequenceDiagram
   end
 ```
 
-## 4. 实践与验证
+## 4. 最小可运行示例
+
+下面的示例只保留关键路径。把它放入对应版本的最小工程，先运行测试或命令确认行为，再逐步加入重试、超时、监控和异常分支。
+
+```java
+String key = "product:" + productId;
+Product cached = redisTemplate.opsForValue().get(key);
+if (cached != null) return cached;
+
+Product loaded = repository.findById(productId)
+    .orElseThrow(NotFoundException::new);
+redisTemplate.opsForValue().set(
+    key, loaded, Duration.ofMinutes(5).plusSeconds(ThreadLocalRandom.current().nextInt(30))
+);
+return loaded;
+```
+
+## 5. 实践与验证
 
 1. 实现带版本的 cache-aside，制造慢回填覆盖新值并修复。
 2. 压测热 key、大 key 和批量删除，观察延迟长尾。
 3. 演练 Redis 主节点故障与缓存全失效时的数据库保护。
 
-## 5. 掌握检查
+## 6. 掌握检查
 
 - [ ] 能按业务语义选择 Redis 数据类型。
 - [ ] 能区分 TTL、淘汰和持久化。

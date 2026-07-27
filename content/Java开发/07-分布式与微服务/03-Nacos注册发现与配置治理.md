@@ -66,13 +66,31 @@ sequenceDiagram
   P->>N: deregister before shutdown
 ```
 
-## 4. 实践与验证
+## 4. 最小可运行示例
+
+下面的示例只保留关键路径。把它放入对应版本的最小工程，先运行测试或命令确认行为，再逐步加入重试、超时、监控和异常分支。
+
+```yaml
+spring:
+  application:
+    name: order-service
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_ADDR}
+        namespace: ${NACOS_NAMESPACE}
+      config:
+        import-check:
+          enabled: true
+```
+
+## 5. 实践与验证
 
 1. 建立 dev/test/prod 命名空间和最小权限。
 2. 模拟 Nacos 短时不可用，验证消费者本地缓存。
 3. 发布一个动态限流配置并演练校验、灰度和回滚。
 
-## 5. 掌握检查
+## 6. 掌握检查
 
 - [ ] 能区分注册与 readiness。
 - [ ] 能设计实例优雅下线。

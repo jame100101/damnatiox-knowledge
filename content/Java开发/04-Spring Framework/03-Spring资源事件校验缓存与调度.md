@@ -62,13 +62,29 @@ flowchart LR
   C --> F["调度/异步执行器"]
 ```
 
-## 4. 实践与验证
+## 4. 最小可运行示例
+
+下面的示例只保留关键路径。把它放入对应版本的最小工程，先运行测试或命令确认行为，再逐步加入重试、超时、监控和异常分支。
+
+```java
+record OrderCreated(long orderId) {}
+
+@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+public void on(OrderCreated event) {
+  notificationQueue.enqueue(event.orderId());
+}
+
+@Scheduled(cron = "0 */5 * * * *", zone = "Asia/Taipei")
+void reconcilePendingOrders() { /* 幂等扫描 */ }
+```
+
+## 5. 实践与验证
 
 1. 把散落配置重构为强类型 ConfigurationProperties 并添加启动校验。
 2. 比较同步事件和异步事件的异常传播。
 3. 在两个应用实例上运行定时任务，设计幂等和单执行方案。
 
-## 5. 掌握检查
+## 6. 掌握检查
 
 - [ ] 能正确读取 jar 内 classpath 资源。
 - [ ] 能区分进程内事件与可靠消息。

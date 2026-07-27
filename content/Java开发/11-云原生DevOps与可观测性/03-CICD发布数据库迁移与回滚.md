@@ -64,13 +64,24 @@ flowchart LR
   F -->|失败| H["停流/回滚/前向修复"]
 ```
 
-## 4. 实践与验证
+## 4. 最小可运行示例
+
+下面的示例只保留关键路径。把它放入对应版本的最小工程，先运行测试或命令确认行为，再逐步加入重试、超时、监控和异常分支。
+
+```sql
+-- V3__add_order_version.sql
+ALTER TABLE orders ADD COLUMN version BIGINT NOT NULL DEFAULT 0;
+CREATE INDEX idx_orders_status_created
+  ON orders(status, created_at DESC);
+```
+
+## 5. 实践与验证
 
 1. 设计可兼容两个应用版本的字段迁移。
 2. 为 canary 设置错误率、p99 和业务转化门禁。
 3. 演练应用回滚但数据已由新版本写入的处理。
 
-## 5. 掌握检查
+## 6. 掌握检查
 
 - [ ] 能实现 build once。
 - [ ] 能选择发布策略。

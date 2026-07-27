@@ -65,13 +65,28 @@ flowchart TD
   E --> H["用户旅程"]
 ```
 
-## 4. 实践与验证
+## 4. 最小可运行示例
+
+下面的示例只保留关键路径。把它放入对应版本的最小工程，先运行测试或命令确认行为，再逐步加入重试、超时、监控和异常分支。
+
+```java
+@Test
+void rejectsTransferWhenBalanceIsInsufficient() {
+  Account account = new Account("A", new BigDecimal("10.00"));
+
+  assertThrows(InsufficientBalanceException.class,
+      () -> account.debit(new BigDecimal("10.01")));
+  assertEquals(new BigDecimal("10.00"), account.balance());
+}
+```
+
+## 5. 实践与验证
 
 1. 用参数化测试覆盖价格计算的边界和异常。
 2. 重构一个过度 mock 的 service，使领域逻辑可直接测试。
 3. 注入 Clock，验证跨日和过期行为。
 
-## 5. 掌握检查
+## 6. 掌握检查
 
 - [ ] 能按风险选测试层。
 - [ ] 能正确使用 JUnit fixture。

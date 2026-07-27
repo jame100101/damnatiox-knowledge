@@ -99,7 +99,20 @@ ConcurrentHashMap、CopyOnWriteArrayList、BlockingQueue 等提供特定并发�
 
 **常见误区：** 使用线程安全集合后，把“先检查再执行”的多步逻辑误认为整体原子。
 
+## 3.9 最小可运行示例
 
+```java
+Map<String, Long> counts = orders.stream()
+    .collect(Collectors.groupingBy(
+        Order::status,
+        LinkedHashMap::new,
+        Collectors.counting()));
+
+List<Order> newest = orders.stream()
+    .sorted(Comparator.comparing(Order::createdAt).reversed())
+    .limit(20)
+    .toList();
+```
 
 ## 4. 现代 Java 校准
 

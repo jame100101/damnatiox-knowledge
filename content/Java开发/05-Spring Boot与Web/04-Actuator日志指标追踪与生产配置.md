@@ -65,13 +65,32 @@ flowchart LR
   F --> G["SLO 告警 + Runbook"]
 ```
 
-## 4. 实践与验证
+## 4. 最小可运行示例
+
+下面的示例只保留关键路径。把它放入对应版本的最小工程，先运行测试或命令确认行为，再逐步加入重试、超时、监控和异常分支。
+
+```yaml
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  tracing:
+    sampling:
+      probability: 0.1
+```
+
+## 5. 实践与验证
 
 1. 为订单接口接入 Actuator、Timer 和 trace，构造一次跨服务慢请求。
 2. 验证异步线程池中 MDC/trace 是否传播与清理。
 3. 设计 readiness/liveness 并模拟数据库和自身死锁故障。
 
-## 5. 掌握检查
+## 6. 掌握检查
 
 - [ ] 能安全暴露 Actuator。
 - [ ] 能区分 liveness 与 readiness。

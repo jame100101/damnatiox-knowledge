@@ -41,6 +41,7 @@
   --kb-home-art-opacity: 0.06;
   --kb-home-art-filter: invert(1);
   --kb-home-art-blend: screen;
+  --kb-home-surface: rgb(17 20 24 / 88%);
   --kb-sidebar-width: 280px;
   --kb-right-sidebar-width: 240px;
   --kb-content-width: 820px;
@@ -112,6 +113,7 @@
   --kb-home-art-opacity: 0.075;
   --kb-home-art-filter: none;
   --kb-home-art-blend: multiply;
+  --kb-home-surface: rgb(255 255 255 / 86%);
 }
 
 * {

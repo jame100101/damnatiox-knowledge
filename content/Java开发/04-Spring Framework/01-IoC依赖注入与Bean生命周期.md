@@ -63,13 +63,30 @@ flowchart LR
   F --> G["销毁回调"]
 ```
 
-## 4. 实践与验证
+## 4. 最小可运行示例
+
+下面的示例只保留关键路径。把它放入对应版本的最小工程，先运行测试或命令确认行为，再逐步加入重试、超时、监控和异常分支。
+
+```java
+@Service
+final class CheckoutService {
+  private final OrderRepository orders;
+  private final PaymentPort payments;
+
+  CheckoutService(OrderRepository orders, PaymentPort payments) {
+    this.orders = orders;
+    this.payments = payments;
+  }
+}
+```
+
+## 5. 实践与验证
 
 1. 把字段注入服务重构为构造器注入并写无 Spring 单元测试。
 2. 制造循环依赖，再通过职责拆分消除。
 3. 记录一个代理 Bean 从定义到销毁的生命周期回调顺序。
 
-## 5. 掌握检查
+## 6. 掌握检查
 
 - [ ] 能解释 ApplicationContext 与 BeanDefinition。
 - [ ] 能选择构造器、setter 和 Provider。

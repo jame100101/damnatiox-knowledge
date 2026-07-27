@@ -62,13 +62,34 @@ flowchart TD
   D --> E
 ```
 
-## 4. 实践与验证
+## 4. 最小可运行示例
+
+下面的示例只保留关键路径。把它放入对应版本的最小工程，先运行测试或命令确认行为，再逐步加入重试、超时、监控和异常分支。
+
+```sql
+CREATE TABLE orders (
+  id BIGINT PRIMARY KEY,
+  customer_id BIGINT NOT NULL,
+  status VARCHAR(24) NOT NULL,
+  created_at TIMESTAMP NOT NULL
+);
+CREATE INDEX idx_orders_customer_created
+  ON orders(customer_id, created_at DESC, id DESC);
+
+SELECT id, status, created_at
+FROM orders
+WHERE customer_id = ? AND (created_at, id) < (?, ?)
+ORDER BY created_at DESC, id DESC
+FETCH FIRST 20 ROWS ONLY;
+```
+
+## 5. 实践与验证
 
 1. 用同一订单域分别做关系模型和文档模型，比较更新原子性。
 2. 在 PostgreSQL JSONB 和 MongoDB 上实现同一查询并比较索引。
 3. 演练副本故障下的客户端重试与重复写防护。
 
-## 5. 掌握检查
+## 6. 掌握检查
 
 - [ ] 能解释 PostgreSQL MVCC/vacuum。
 - [ ] 能选择 MongoDB 嵌入或引用。

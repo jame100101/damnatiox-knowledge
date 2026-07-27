@@ -63,13 +63,26 @@ flowchart TD
   E -->|否| G["查询状态/补偿/人工处理"]
 ```
 
-## 4. 实践与验证
+## 4. 最小可运行示例
+
+下面的示例只保留关键路径。把它放入对应版本的最小工程，先运行测试或命令确认行为，再逐步加入重试、超时、监控和异常分支。
+
+```java
+record VersionedValue(String value, long version) {}
+
+VersionedValue update(VersionedValue current, String next, long expectedVersion) {
+  if (current.version() != expectedVersion) throw new ConflictException();
+  return new VersionedValue(next, current.version() + 1);
+}
+```
+
+## 5. 实践与验证
 
 1. 构造响应丢失场景，设计订单创建的幂等键与状态查询。
 2. 画出三副本 Raft 在一个节点故障时的提交条件。
 3. 为用户资料和余额分别选择一致性模型并说明不变量。
 
-## 5. 掌握检查
+## 6. 掌握检查
 
 - [ ] 能准确陈述 CAP 条件。
 - [ ] 能解释 timeout 的不确定性。

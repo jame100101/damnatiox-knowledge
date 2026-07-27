@@ -64,13 +64,33 @@ flowchart LR
   E --> C
 ```
 
-## 4. 实践与验证
+## 4. 最小可运行示例
+
+下面的示例只保留关键路径。把它放入对应版本的最小工程，先运行测试或命令确认行为，再逐步加入重试、超时、监控和异常分支。
+
+```html
+<form id="search">
+  <label for="keyword">关键字</label>
+  <input id="keyword" name="keyword" required minlength="2">
+  <button type="submit">搜索</button>
+</form>
+<script type="module">
+  const form = document.querySelector('#search')
+  form.addEventListener('submit', event => {
+    event.preventDefault()
+    const data = new FormData(form)
+    console.log(data.get('keyword'))
+  })
+</script>
+```
+
+## 5. 实践与验证
 
 1. 构建可键盘操作、带校验错误关联的表单。
 2. 用 DevTools 解释一次缓存命中和一次 CORS 预检。
 3. 为网络响应写 TypeScript 类型与运行时 schema 校验。
 
-## 5. 掌握检查
+## 6. 掌握检查
 
 - [ ] 能解释同源/CORS。
 - [ ] 能使用语义元素。

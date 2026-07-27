@@ -62,13 +62,26 @@ flowchart LR
   C -->|失败到上限| DLQ["死信/人工队列"]
 ```
 
-## 4. 实践与验证
+## 4. 最小可运行示例
+
+下面的示例只保留关键路径。把它放入对应版本的最小工程，先运行测试或命令确认行为，再逐步加入重试、超时、监控和异常分支。
+
+```java
+rabbitTemplate.convertAndSend("orders.exchange", "orders.created", event,
+    message -> {
+      message.getMessageProperties().setMessageId(event.eventId().toString());
+      message.getMessageProperties().setDeliveryMode(MessageDeliveryMode.PERSISTENT);
+      return message;
+    });
+```
+
+## 5. 实践与验证
 
 1. 搭建 RabbitMQ topic exchange，验证不可路由消息与 publisher confirm。
 2. 模拟 consumer nack/requeue，修复为有界退避和死信。
 3. 为订单事务消息写状态回查决策表。
 
-## 5. 掌握检查
+## 6. 掌握检查
 
 - [ ] 能解释 exchange 与 queue。
 - [ ] 能组合 confirms/acks/持久化。

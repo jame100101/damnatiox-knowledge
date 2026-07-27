@@ -63,13 +63,31 @@ stateDiagram-v2
   Managed --> Database: flush SQL
 ```
 
-## 4. 实践与验证
+## 4. 最小可运行示例
+
+下面的示例只保留关键路径。把它放入对应版本的最小工程，先运行测试或命令确认行为，再逐步加入重试、超时、监控和异常分支。
+
+```java
+@Entity
+class PurchaseOrder {
+  @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
+
+  @Version
+  private long version;
+
+  @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+  private final List<OrderLine> lines = new ArrayList<>();
+}
+```
+
+## 5. 实践与验证
 
 1. 建立订单、订单项和值对象映射，写出数量、SQL 次数和事务边界测试。
 2. 演示 N+1、fetch join、DTO 投影三种方案并比较结果。
 3. 用 `@Version` 构造并发更新冲突。
 
-## 5. 掌握检查
+## 6. 掌握检查
 
 - [ ] 能区分规范、实现和仓库抽象。
 - [ ] 能解释 flush/commit。

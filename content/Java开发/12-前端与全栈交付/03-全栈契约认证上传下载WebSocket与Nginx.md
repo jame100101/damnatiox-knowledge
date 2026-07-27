@@ -63,13 +63,31 @@ flowchart LR
   A --> S["Session/OAuth"]
 ```
 
-## 4. 实践与验证
+## 4. 最小可运行示例
+
+下面的示例只保留关键路径。把它放入对应版本的最小工程，先运行测试或命令确认行为，再逐步加入重试、超时、监控和异常分支。
+
+```nginx
+location /api/ {
+  proxy_pass http://backend;
+  proxy_set_header Host $host;
+  proxy_set_header X-Forwarded-Proto $scheme;
+}
+location /ws/ {
+  proxy_pass http://backend;
+  proxy_http_version 1.1;
+  proxy_set_header Upgrade $http_upgrade;
+  proxy_set_header Connection "upgrade";
+}
+```
+
+## 5. 实践与验证
 
 1. 生成 OpenAPI TypeScript 客户端并写兼容测试。
 2. 实现流式导入、逐行错误报告和异步导出。
 3. 通过 Nginx 发布 HTTPS 与 WebSocket，验证重连和权限失效。
 
-## 5. 掌握检查
+## 6. 掌握检查
 
 - [ ] 能维护契约。
 - [ ] 能选择浏览器认证。

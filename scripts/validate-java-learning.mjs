@@ -38,6 +38,23 @@ const expectedFolders = [
   '13-项目阶梯',
 ]
 
+const expectedSupplementary = [
+  '02-工程工具与Linux/04-数据结构算法复杂度与刷题方法.md',
+  '02-工程工具与Linux/05-设计原则UML与常用设计模式.md',
+  '02-工程工具与Linux/06-JVM内存类加载字节码与GC.md',
+  '04-Spring Framework/04-Spring异步定时任务Quartz与Batch.md',
+  '05-Spring Boot与Web/05-OpenAPI文件处理邮件与WebSocket.md',
+  '06-数据访问与ORM/04-MyBatis-Plus工程实践.md',
+  '07-分布式与微服务/06-Spring-Cloud与Spring-Cloud-Alibaba组件图.md',
+  '07-分布式与微服务/07-Seata-Sentinel-SkyWalking实战边界.md',
+  '08-高性能与消息队列/06-Caffeine本地缓存与多级缓存.md',
+  '12-前端与全栈交付/04-HTML语义表单媒体与可访问性.md',
+  '12-前端与全栈交付/05-CSS级联盒模型布局响应式与动画.md',
+  '12-前端与全栈交付/06-JavaScript基础类型函数集合DOM与事件.md',
+  '12-前端与全栈交付/07-JavaScript高级异步模块网络与性能.md',
+  '12-前端与全栈交付/08-TypeScript-Vue工程化测试与性能.md',
+]
+
 const requiredConcepts = [
   'JDK 25',
   'JDK 26',
@@ -86,6 +103,21 @@ const requiredConcepts = [
   'SLO',
   'TypeScript',
   'Vue 3',
+  '数据结构',
+  '设计模式',
+  '类加载',
+  '垃圾收集',
+  'MyBatis-Plus',
+  'Spring Cloud Alibaba',
+  'Seata',
+  'Sentinel',
+  'SkyWalking',
+  'Spring Batch',
+  'Quartz',
+  'Caffeine',
+  'WebSocket',
+  '事件循环',
+  '可访问性',
 ]
 
 async function walk(directory) {
@@ -124,7 +156,26 @@ for (const folder of expectedFolders) {
   }
 }
 
+for (const folder of expectedFolders.slice(1)) {
+  try {
+    await fs.access(path.join(contentRoot, folder, '00-本阶段导学.md'))
+  } catch {
+    errors.push(`缺少阶段导学：${folder}`)
+  }
+}
+
+for (const relative of expectedSupplementary) {
+  try {
+    await fs.access(path.join(contentRoot, ...relative.split('/')))
+  } catch {
+    errors.push(`缺少路线补全文档：${relative}`)
+  }
+}
+
 const files = await walk(contentRoot)
+if (files.length !== 100) {
+  errors.push(`Java 路线文档应为 100 个，实际为 ${files.length} 个`)
+}
 let combined = ''
 for (const filename of files) {
   const markdown = await fs.readFile(filename, 'utf8')
@@ -139,6 +190,14 @@ for (const filename of files) {
     errors.push(`代码围栏未闭合：${relative}`)
   }
   const isReading = relative.includes(`${path.sep}90-推荐阅读${path.sep}`)
+  const isOverview = relative === '00-Java后端学习路线总览.md'
+  const hasExecutableExample =
+    /```(?:java|xml|sql|bash|yaml|json|typescript|javascript|vue|nginx|dockerfile|properties|proto|html|http|css)\b/.test(
+      markdown,
+    )
+  if (!isReading && !isOverview && !hasExecutableExample) {
+    errors.push(`缺少非 Mermaid 代码示例：${relative}`)
+  }
   const minimum = isReading ? 350 : 1000
   if (markdown.length < minimum) {
     errors.push(`内容长度低于 ${minimum} 字符：${relative}`)

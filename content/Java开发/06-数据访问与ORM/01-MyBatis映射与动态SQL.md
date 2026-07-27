@@ -66,13 +66,34 @@ sequenceDiagram
   E-->>S: ResultMap 组装对象
 ```
 
-## 4. 实践与验证
+## 4. 最小可运行示例
+
+下面的示例只保留关键路径。把它放入对应版本的最小工程，先运行测试或命令确认行为，再逐步加入重试、超时、监控和异常分支。
+
+```sql
+CREATE TABLE orders (
+  id BIGINT PRIMARY KEY,
+  customer_id BIGINT NOT NULL,
+  status VARCHAR(24) NOT NULL,
+  created_at TIMESTAMP NOT NULL
+);
+CREATE INDEX idx_orders_customer_created
+  ON orders(customer_id, created_at DESC, id DESC);
+
+SELECT id, status, created_at
+FROM orders
+WHERE customer_id = ? AND (created_at, id) < (?, ?)
+ORDER BY created_at DESC, id DESC
+FETCH FIRST 20 ROWS ONLY;
+```
+
+## 5. 实践与验证
 
 1. 实现带白名单排序和 seek 分页的订单查询。
 2. 对一对多映射分别测试 join 和分步查询，比较 SQL 数与数据量。
 3. 用数据库真实执行计划验证索引，而不是只看生成的 SQL。
 
-## 5. 掌握检查
+## 6. 掌握检查
 
 - [ ] 能解释 `#{}` 与 `${}` 的边界。
 - [ ] 能定位 N+1 和映射重复。

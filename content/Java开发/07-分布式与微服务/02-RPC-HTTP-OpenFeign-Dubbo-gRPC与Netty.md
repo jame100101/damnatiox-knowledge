@@ -63,13 +63,30 @@ flowchart LR
   F --> G["稳定错误码 + Trace"]
 ```
 
-## 4. 实践与验证
+## 4. 最小可运行示例
+
+下面的示例只保留关键路径。把它放入对应版本的最小工程，先运行测试或命令确认行为，再逐步加入重试、超时、监控和异常分支。
+
+```proto
+syntax = "proto3";
+service InventoryService {
+  rpc Reserve(ReserveRequest) returns (ReserveReply);
+}
+message ReserveRequest {
+  string request_id = 1;
+  int64 sku_id = 2;
+  int32 quantity = 3;
+}
+message ReserveReply { bool accepted = 1; }
+```
+
+## 5. 实践与验证
 
 1. 用 OpenAPI 或 Protobuf 定义可兼容演进的订单契约。
 2. 在客户端加入 deadline、幂等重试和指标，模拟慢响应。
 3. 写一个 Netty 长度字段协议并验证半包、粘包和超大帧。
 
-## 5. 掌握检查
+## 6. 掌握检查
 
 - [ ] 能设计兼容契约。
 - [ ] 能控制多层重试。

@@ -62,13 +62,29 @@ flowchart LR
   E --> F["稳定响应/Problem Details"]
 ```
 
-## 4. 实践与验证
+## 4. 最小可运行示例
+
+下面的示例只保留关键路径。把它放入对应版本的最小工程，先运行测试或命令确认行为，再逐步加入重试、超时、监控和异常分支。
+
+```java
+record OrderCreated(long orderId) {}
+
+@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+public void on(OrderCreated event) {
+  notificationQueue.enqueue(event.orderId());
+}
+
+@Scheduled(cron = "0 */5 * * * *", zone = "Asia/Taipei")
+void reconcilePendingOrders() { /* 幂等扫描 */ }
+```
+
+## 5. 实践与验证
 
 1. 设计订单 API，覆盖 ETag、幂等创建和 keyset 分页。
 2. 生成 OpenAPI 并对破坏性 schema 变更做 CI 检查。
 3. 为 400/401/403/404/409/422/500 建统一错误契约测试。
 
-## 5. 掌握检查
+## 6. 掌握检查
 
 - [ ] 能正确选择 HTTP method/status。
 - [ ] 能划分 DTO 校验、业务校验和数据库约束。

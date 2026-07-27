@@ -64,13 +64,30 @@ flowchart LR
   H["startup/readiness/liveness"] --> P1
 ```
 
-## 4. 实践与验证
+## 4. 最小可运行示例
+
+下面的示例只保留关键路径。把它放入对应版本的最小工程，先运行测试或命令确认行为，再逐步加入重试、超时、监控和异常分支。
+
+```yaml
+readinessProbe:
+  httpGet:
+    path: /actuator/health/readiness
+    port: 8080
+  initialDelaySeconds: 10
+livenessProbe:
+  httpGet:
+    path: /actuator/health/liveness
+    port: 8080
+  failureThreshold: 3
+```
+
+## 5. 实践与验证
 
 1. 部署 3 副本应用，验证 readiness 摘流和滚动升级。
 2. 设置 requests/limits 并观察 CPU throttling 与 OOM。
 3. 写默认拒绝 NetworkPolicy 和最小依赖规则。
 
-## 5. 掌握检查
+## 6. 掌握检查
 
 - [ ] 能选工作负载控制器。
 - [ ] 能解释 Service 到 Pod。

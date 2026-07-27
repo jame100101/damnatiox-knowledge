@@ -65,13 +65,28 @@ flowchart LR
   G -->|是| H["灰度与持续观测"]
 ```
 
-## 4. 实践与验证
+## 4. 最小可运行示例
+
+下面的示例只保留关键路径。把它放入对应版本的最小工程，先运行测试或命令确认行为，再逐步加入重试、超时、监控和异常分支。
+
+```java
+public final class Example {
+  private Example() {}
+
+  public static <T> List<T> immutableCopy(Collection<? extends T> source) {
+    Objects.requireNonNull(source, "source");
+    return List.copyOf(source);
+  }
+}
+```
+
+## 5. 实践与验证
 
 1. 用 JMH 比较两种集合查找，解释预热和 Blackhole。
 2. 对一个接口采集 JFR 并区分 CPU、锁与分配热点。
 3. 写出峰值、实例数、连接池和数据库容量表。
 
-## 5. 掌握检查
+## 6. 掌握检查
 
 - [ ] 能使用分位数和饱和点。
 - [ ] 能写可信 JMH。

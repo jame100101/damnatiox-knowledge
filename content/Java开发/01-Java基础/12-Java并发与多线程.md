@@ -108,7 +108,18 @@ CompletableFuture 组合异步阶段，但默认 commonPool 与异常链需谨�
 
 **常见误区：** 只组合成功路径，忽略 exceptionally/handle、超时和取消；把 preview 当稳定长期 API。
 
+## 3.9 最小可运行示例
 
+```java
+try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+  List<Future<String>> futures = endpoints.stream()
+      .map(uri -> executor.submit(() -> client.fetch(uri)))
+      .toList();
+  for (Future<String> future : futures) {
+    System.out.println(future.get(2, TimeUnit.SECONDS));
+  }
+}
+```
 
 ## 4. 现代 Java 校准
 

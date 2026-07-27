@@ -63,13 +63,26 @@ flowchart LR
   F --> G["验证或回滚"]
 ```
 
-## 4. 实践与验证
+## 4. 最小可运行示例
+
+下面的示例只保留关键路径。把它放入对应版本的最小工程，先运行测试或命令确认行为，再逐步加入重试、超时、监控和异常分支。
+
+```bash
+git switch -c feature/order-query
+git add src test
+git commit -m "feat: add cursor based order query"
+git fetch origin
+git rebase origin/main
+git push --set-upstream origin feature/order-query
+```
+
+## 5. 实践与验证
 
 1. 在临时仓库制造 merge/rebase 冲突，比较提交图。
 2. 设计主分支保护和 Conventional Commits/版本发布规则。
 3. 演练一次数据库迁移发布失败后的代码与数据回滚。
 
-## 5. 掌握检查
+## 6. 掌握检查
 
 - [ ] 能解释 HEAD、index、branch 与 commit。
 - [ ] 能选择 revert、reset、rebase 和 merge。

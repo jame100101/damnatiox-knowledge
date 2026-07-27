@@ -64,13 +64,28 @@ flowchart LR
   G --> H["方法/对象级授权"]
 ```
 
-## 4. 实践与验证
+## 4. 最小可运行示例
+
+下面的示例只保留关键路径。把它放入对应版本的最小工程，先运行测试或命令确认行为，再逐步加入重试、超时、监控和异常分支。
+
+```java
+public final class Example {
+  private Example() {}
+
+  public static <T> List<T> immutableCopy(Collection<? extends T> source) {
+    Objects.requireNonNull(source, "source");
+    return List.copyOf(source);
+  }
+}
+```
+
+## 5. 实践与验证
 
 1. 为普通用户、运营和管理员设计动作权限矩阵。
 2. 写 401、403、跨租户访问和方法授权测试。
 3. 演练密码参数升级与会话注销。
 
-## 5. 掌握检查
+## 6. 掌握检查
 
 - [ ] 能画出过滤链。
 - [ ] 能区分认证和授权。

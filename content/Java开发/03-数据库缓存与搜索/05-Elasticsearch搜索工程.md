@@ -72,13 +72,30 @@ flowchart LR
   E --> F["搜索 API"]
 ```
 
-## 4. 实践与验证
+## 4. 最小可运行示例
+
+下面的示例只保留关键路径。把它放入对应版本的最小工程，先运行测试或命令确认行为，再逐步加入重试、超时、监控和异常分支。
+
+```json
+POST /products/_search
+{
+  "query": {
+    "bool": {
+      "must": [{"match": {"name": "机械键盘"}}],
+      "filter": [{"term": {"available": true}}]
+    }
+  },
+  "sort": [{"score": "desc"}, {"_id": "asc"}]
+}
+```
+
+## 5. 实践与验证
 
 1. 为商品搜索设计 mapping，并用 `_analyze` 验证中英文分析。
 2. 实现 PIT + search_after 稳定翻页。
 3. 模拟数据库到 ES 事件乱序，用版本控制拒绝旧更新。
 
-## 5. 掌握检查
+## 6. 掌握检查
 
 - [ ] 能区分 text 与 keyword。
 - [ ] 能说明 query 与 filter context。

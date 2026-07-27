@@ -62,13 +62,30 @@ flowchart LR
   E --> F["Web Server + Runners"]
 ```
 
-## 4. 实践与验证
+## 4. 最小可运行示例
+
+下面的示例只保留关键路径。把它放入对应版本的最小工程，先运行测试或命令确认行为，再逐步加入重试、超时、监控和异常分支。
+
+```java
+@AutoConfiguration
+@ConditionalOnClass(HttpClient.class)
+@EnableConfigurationProperties(ClientProperties.class)
+class ClientAutoConfiguration {
+  @Bean
+  @ConditionalOnMissingBean
+  HttpClient client(ClientProperties p) {
+    return HttpClient.newBuilder().connectTimeout(p.timeout()).build();
+  }
+}
+```
+
+## 5. 实践与验证
 
 1. 用 conditions report 解释 DataSource 自动配置为何匹配/未匹配。
 2. 写一个带配置 metadata 和 back-off 规则的小型 starter。
 3. 在 Boot 3.5 与 4.1 测试同一最小应用的兼容差异。
 
-## 5. 掌握检查
+## 6. 掌握检查
 
 - [ ] 能拆解 @SpringBootApplication。
 - [ ] 能解释 starter 与 auto-configuration。

@@ -62,13 +62,24 @@ flowchart LR
   E --> F["SIGTERM 优雅停机"]
 ```
 
-## 4. 实践与验证
+## 4. 最小可运行示例
+
+下面的示例只保留关键路径。把它放入对应版本的最小工程，先运行测试或命令确认行为，再逐步加入重试、超时、监控和异常分支。
+
+```bash
+set -euo pipefail
+readonly APP_JAR="${1:-app.jar}"
+test -f "$APP_JAR"
+exec java -XX:MaxRAMPercentage=75 -jar "$APP_JAR"
+```
+
+## 5. 实践与验证
 
 1. 为 Spring Boot 服务写多阶段 Dockerfile，并以非 root、只读根文件系统运行。
 2. 写 Shell 健康检查脚本，正确传播退出码并处理带空格参数。
 3. 向容器发送 SIGTERM，验证停止接流量与请求排空顺序。
 
-## 5. 掌握检查
+## 6. 掌握检查
 
 - [ ] 能用 Linux 工具定位端口、进程、文件句柄和日志。
 - [ ] 能解释 Shell 引用、管道和 pipefail。

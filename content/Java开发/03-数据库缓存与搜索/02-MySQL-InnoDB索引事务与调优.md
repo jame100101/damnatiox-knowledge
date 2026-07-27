@@ -72,13 +72,34 @@ flowchart LR
   E --> F["回归与压测"]
 ```
 
-## 4. 实践与验证
+## 4. 最小可运行示例
+
+下面的示例只保留关键路径。把它放入对应版本的最小工程，先运行测试或命令确认行为，再逐步加入重试、超时、监控和异常分支。
+
+```sql
+CREATE TABLE orders (
+  id BIGINT PRIMARY KEY,
+  customer_id BIGINT NOT NULL,
+  status VARCHAR(24) NOT NULL,
+  created_at TIMESTAMP NOT NULL
+);
+CREATE INDEX idx_orders_customer_created
+  ON orders(customer_id, created_at DESC, id DESC);
+
+SELECT id, status, created_at
+FROM orders
+WHERE customer_id = ? AND (created_at, id) < (?, ?)
+ORDER BY created_at DESC, id DESC
+FETCH FIRST 20 ROWS ONLY;
+```
+
+## 5. 实践与验证
 
 1. 验证覆盖索引、回表和联合索引列顺序。
 2. 制造死锁并从 InnoDB 状态中还原等待图。
 3. 完成全量备份 + binlog 时间点恢复演练。
 
-## 5. 掌握检查
+## 6. 掌握检查
 
 - [ ] 能解释 InnoDB 聚簇索引。
 - [ ] 能区分一致性读与当前读。

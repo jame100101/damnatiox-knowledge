@@ -68,13 +68,27 @@ sequenceDiagram
   R-->>C: resource
 ```
 
-## 4. 实践与验证
+## 4. 最小可运行示例
+
+下面的示例只保留关键路径。把它放入对应版本的最小工程，先运行测试或命令确认行为，再逐步加入重试、超时、监控和异常分支。
+
+```json
+{
+  "iss": "https://id.example.com",
+  "sub": "user-42",
+  "aud": ["order-api"],
+  "exp": 1785000000,
+  "scope": "orders:read orders:write"
+}
+```
+
+## 5. 实践与验证
 
 1. 画出 BFF 授权码+PKCE流程和威胁点。
 2. 为资源服务器写错误 issuer、audience、过期和权限不足测试。
 3. 设计 refresh rotation 与重用检测状态。
 
-## 5. 掌握检查
+## 6. 掌握检查
 
 - [ ] 能区分 OAuth/OIDC/JWT。
 - [ ] 能完整验证 JWT。

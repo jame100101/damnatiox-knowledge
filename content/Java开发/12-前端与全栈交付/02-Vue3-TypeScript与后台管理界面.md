@@ -64,13 +64,33 @@ flowchart LR
   B --> G["Table/Form/Dialog"]
 ```
 
-## 4. 实践与验证
+## 4. 最小可运行示例
+
+下面的示例只保留关键路径。把它放入对应版本的最小工程，先运行测试或命令确认行为，再逐步加入重试、超时、监控和异常分支。
+
+```html
+<form id="search">
+  <label for="keyword">关键字</label>
+  <input id="keyword" name="keyword" required minlength="2">
+  <button type="submit">搜索</button>
+</form>
+<script type="module">
+  const form = document.querySelector('#search')
+  form.addEventListener('submit', event => {
+    event.preventDefault()
+    const data = new FormData(form)
+    console.log(data.get('keyword'))
+  })
+</script>
+```
+
+## 5. 实践与验证
 
 1. 实现带筛选、服务端排序、分页和竞态取消的列表。
 2. 实现表单 400/409/403 错误映射。
 3. 用键盘完整操作对话框和表格动作。
 
-## 5. 掌握检查
+## 6. 掌握检查
 
 - [ ] 能管理请求状态。
 - [ ] 能防旧响应覆盖。

@@ -63,13 +63,31 @@ flowchart LR
   F --> G["Runbook/响应/复盘"]
 ```
 
-## 4. 实践与验证
+## 4. 最小可运行示例
+
+下面的示例只保留关键路径。把它放入对应版本的最小工程，先运行测试或命令确认行为，再逐步加入重试、超时、监控和异常分支。
+
+```yaml
+receivers:
+  otlp:
+    protocols: { grpc: {}, http: {} }
+processors:
+  batch: {}
+exporters:
+  otlphttp:
+    endpoint: ${OBSERVABILITY_ENDPOINT}
+service:
+  pipelines:
+    traces: { receivers: [otlp], processors: [batch], exporters: [otlphttp] }
+```
+
+## 5. 实践与验证
 
 1. 为登录服务定义可用性和延迟 SLI/SLO。
 2. 接入 OTel 并验证 HTTP、数据库和消息 context。
 3. 写一份含停止条件、回滚和沟通的故障 runbook。
 
-## 5. 掌握检查
+## 6. 掌握检查
 
 - [ ] 能控制属性基数。
 - [ ] 能定义用户导向 SLI。

@@ -62,13 +62,32 @@ flowchart LR
   E --> F["制品仓库"]
 ```
 
-## 4. 实践与验证
+## 4. 最小可运行示例
+
+下面的示例只保留关键路径。把它放入对应版本的最小工程，先运行测试或命令确认行为，再逐步加入重试、超时、监控和异常分支。
+
+```xml
+<properties>
+  <maven.compiler.release>25</maven.compiler.release>
+  <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+</properties>
+<dependencies>
+  <dependency>
+    <groupId>org.junit.jupiter</groupId>
+    <artifactId>junit-jupiter</artifactId>
+    <version>6.0.2</version>
+    <scope>test</scope>
+  </dependency>
+</dependencies>
+```
+
+## 5. 实践与验证
 
 1. 创建 Maven 多模块项目，使用 BOM 和 Enforcer 阻止依赖版本漂移。
 2. 用 Gradle Toolchains 在本机缺少目标 JDK 时完成编译与测试。
 3. 故意引入两个不同版本的日志依赖，分别用 Maven 和 Gradle 解释最终解析结果。
 
-## 5. 掌握检查
+## 6. 掌握检查
 
 - [ ] 能解释 Maven 生命周期与插件 goal 的关系。
 - [ ] 能区分 dependencyManagement 与 dependencies。

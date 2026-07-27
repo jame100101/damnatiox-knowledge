@@ -64,13 +64,28 @@ flowchart LR
   F -->|失败| H["定位/修复/责任人"]
 ```
 
-## 4. 实践与验证
+## 4. 最小可运行示例
+
+下面的示例只保留关键路径。把它放入对应版本的最小工程，先运行测试或命令确认行为，再逐步加入重试、超时、监控和异常分支。
+
+```typescript
+import { test, expect } from '@playwright/test'
+
+test('管理员可创建订单', async ({ page }) => {
+  await page.goto('/orders/new')
+  await page.getByLabel('客户编号').fill('C-001')
+  await page.getByRole('button', { name: '创建' }).click()
+  await expect(page.getByText('创建成功')).toBeVisible()
+})
+```
+
+## 5. 实践与验证
 
 1. 用 Playwright Java 自动化登录、创建订单和权限拒绝。
 2. 构造并行 API 测试数据并证明互不污染。
 3. 建立 flaky 指标和一条有期限的治理规则。
 
-## 5. 掌握检查
+## 6. 掌握检查
 
 - [ ] 能写语义 API 断言。
 - [ ] 能使用稳定 UI locator。

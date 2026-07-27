@@ -63,13 +63,24 @@ flowchart LR
   F --> G["受限容器运行"]
 ```
 
-## 4. 实践与验证
+## 4. 最小可运行示例
+
+下面的示例只保留关键路径。把它放入对应版本的最小工程，先运行测试或命令确认行为，再逐步加入重试、超时、监控和异常分支。
+
+```bash
+set -euo pipefail
+readonly APP_JAR="${1:-app.jar}"
+test -f "$APP_JAR"
+exec java -XX:MaxRAMPercentage=75 -jar "$APP_JAR"
+```
+
+## 5. 实践与验证
 
 1. 为 Spring Boot 服务写多阶段、非 root、只读根镜像。
 2. 用 Compose 启动数据库和 Redis 并等待 readiness。
 3. 生成 SBOM，验证镜像 digest 与 commit 关联。
 
-## 5. 掌握检查
+## 6. 掌握检查
 
 - [ ] 能解释镜像层。
 - [ ] 能预算容器 JVM 内存。

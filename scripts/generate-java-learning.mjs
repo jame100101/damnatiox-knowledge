@@ -6,6 +6,8 @@ import {
   foundationReading,
   overviewMarkdown,
 } from './java-learning-extra.mjs'
+import { codeExampleForTitle } from './java-learning-code-examples.mjs'
+import { stageGuides, supplementaryDocuments } from './java-learning-expansion.mjs'
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const contentRoot = path.join(projectRoot, 'content', 'Java开发')
@@ -33,6 +35,11 @@ function lesson({
   diagram = '',
   example = '',
 }) {
+  const lessonExample =
+    example ||
+    `## 3.9 最小可运行示例
+
+${codeExampleForTitle(title)}`
   const conceptBody = concepts
     .map(
       ({ name, detail, engineering, pitfall }, index) => `### ${index + 1}. ${name}
@@ -63,7 +70,7 @@ ${diagram}
 
 ${conceptBody}
 
-${example}
+${lessonExample}
 
 ## 4. 现代 Java 校准
 
@@ -84,6 +91,7 @@ ${references(refs)}
 }
 
 function topicDoc({ title, summary, scope, topics, process, practice, checks, refs }) {
+  const codeExample = codeExampleForTitle(title)
   return `# ${title}
 
 ${summary}
@@ -110,11 +118,17 @@ ${points.map((item) => `- ${item}`).join('\n')}
 
 ${process}
 
-## 4. 实践与验证
+## 4. 最小可运行示例
+
+下面的示例只保留关键路径。把它放入对应版本的最小工程，先运行测试或命令确认行为，再逐步加入重试、超时、监控和异常分支。
+
+${codeExample}
+
+## 5. 实践与验证
 
 ${practice.map((item, index) => `${index + 1}. ${item}`).join('\n')}
 
-## 5. 掌握检查
+## 6. 掌握检查
 
 ${checks.map((item) => `- [ ] ${item}`).join('\n')}
 
@@ -3468,6 +3482,14 @@ for (const section of backendSections) {
   )
 }
 
+for (const guide of stageGuides) {
+  await writeDoc(`${guide.folder}/00-本阶段导学.md`, guide.content)
+}
+
+for (const doc of supplementaryDocuments) {
+  await writeDoc(`${doc.folder}/${doc.file}`, doc.content)
+}
+
 console.log(
   JSON.stringify(
     {
@@ -3478,6 +3500,14 @@ console.log(
         (count, section) => count + section.docs.length + 1,
         0,
       ),
+      stageGuides: stageGuides.length,
+      supplementaryDocuments: supplementaryDocuments.length,
+      totalDocuments:
+        foundationLessons.length +
+        2 +
+        backendSections.reduce((count, section) => count + section.docs.length + 1, 0) +
+        stageGuides.length +
+        supplementaryDocuments.length,
     },
     null,
     2,

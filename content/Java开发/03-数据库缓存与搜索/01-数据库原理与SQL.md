@@ -72,13 +72,34 @@ flowchart LR
   E --> F["迁移与监控"]
 ```
 
-## 4. 实践与验证
+## 4. 最小可运行示例
+
+下面的示例只保留关键路径。把它放入对应版本的最小工程，先运行测试或命令确认行为，再逐步加入重试、超时、监控和异常分支。
+
+```sql
+CREATE TABLE orders (
+  id BIGINT PRIMARY KEY,
+  customer_id BIGINT NOT NULL,
+  status VARCHAR(24) NOT NULL,
+  created_at TIMESTAMP NOT NULL
+);
+CREATE INDEX idx_orders_customer_created
+  ON orders(customer_id, created_at DESC, id DESC);
+
+SELECT id, status, created_at
+FROM orders
+WHERE customer_id = ? AND (created_at, id) < (?, ?)
+ORDER BY created_at DESC, id DESC
+FETCH FIRST 20 ROWS ONLY;
+```
+
+## 5. 实践与验证
 
 1. 为订单与库存建模，用约束表达合法状态。
 2. 构造脏读、不可重复读、幻读/写偏差实验并记录目标数据库行为。
 3. 为三条真实查询设计联合索引并比较 EXPLAIN ANALYZE。
 
-## 5. 掌握检查
+## 6. 掌握检查
 
 - [ ] 能解释主键、业务键、外键和唯一约束。
 - [ ] 能正确处理 NULL 和外连接。

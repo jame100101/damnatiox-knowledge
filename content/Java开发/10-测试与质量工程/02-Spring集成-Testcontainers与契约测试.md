@@ -63,13 +63,32 @@ flowchart LR
   F --> G["清理/隔离"]
 ```
 
-## 4. 实践与验证
+## 4. 最小可运行示例
+
+下面的示例只保留关键路径。把它放入对应版本的最小工程，先运行测试或命令确认行为，再逐步加入重试、超时、监控和异常分支。
+
+```java
+@Testcontainers
+@SpringBootTest
+class OrderRepositoryIT {
+  @Container
+  static PostgreSQLContainer<?> postgres =
+      new PostgreSQLContainer<>("postgres:18-alpine");
+
+  @DynamicPropertySource
+  static void database(DynamicPropertyRegistry r) {
+    r.add("spring.datasource.url", postgres::getJdbcUrl);
+  }
+}
+```
+
+## 5. 实践与验证
 
 1. 用 PostgreSQL Testcontainer 验证事务隔离和索引查询。
 2. 为 REST 接口写 provider/consumer contract。
 3. 比较 slice 与完整上下文的覆盖范围和耗时。
 
-## 5. 掌握检查
+## 6. 掌握检查
 
 - [ ] 能选 Spring 测试范围。
 - [ ] 能运行真实依赖。
