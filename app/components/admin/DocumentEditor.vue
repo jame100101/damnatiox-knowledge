@@ -311,8 +311,10 @@ async function submit(status: 'draft' | 'published') {
 .editor-pane,
 .preview-pane {
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 .editor-pane {
   border-right: 1px solid var(--kb-border);
@@ -341,6 +343,9 @@ async function submit(status: 'draft' | 'published') {
   width: 100%;
   min-height: 0;
   flex: 1;
+  display: block;
+  overflow: auto;
+  overscroll-behavior: contain;
   resize: none;
   border: 0;
   outline: 0;
@@ -356,6 +361,7 @@ async function submit(status: 'draft' | 'published') {
   flex: 1;
   padding: 26px 28px;
   overflow: auto;
+  overscroll-behavior: contain;
 }
 .editor-actions {
   position: fixed;
