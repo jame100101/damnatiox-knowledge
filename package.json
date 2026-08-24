@@ -21,10 +21,12 @@
     "test:e2e": "playwright test",
     "test:security": "vitest run tests/security",
     "content:import-agent-learning": "node scripts/import-agent-learning.mjs",
-    "content:generate-java-learning": "node scripts/generate-java-learning.mjs",
     "content:validate-java-learning": "node scripts/validate-java-learning.mjs",
     "content:import-java-learning": "node scripts/import-java-learning.mjs",
     "content:verify-java-learning": "node scripts/verify-java-import.mjs",
+    "content:verify": "node scripts/verify-content-import.mjs",
+    "content:validate-architecture": "node scripts/validate-content-architecture.mjs",
+    "content:sync": "node scripts/import-agent-learning.mjs && node scripts/import-java-learning.mjs",
     "content:validate-code-groups": "node scripts/validate-code-language-groups.mjs"
   },
   "overrides": {

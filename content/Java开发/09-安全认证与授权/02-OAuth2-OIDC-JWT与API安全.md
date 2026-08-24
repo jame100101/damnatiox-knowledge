@@ -1,5 +1,12 @@
 # OAuth 2.0、OIDC、JWT 与 API 安全
 
+> **Freshness metadata**
+> - `last_verified`: `2026-08-24`
+> - `version_scope`: `Spring Security 7 concepts; OAuth2/OIDC standards`
+> - `source_type`: `official-docs`
+> - `stability`: `fast-moving`
+
+
 OAuth 2.0 是委托授权框架，OIDC 在其上提供身份层，JWT 是一种令牌格式；三者不是同义词。
 
 ## 1. 本文覆盖范围

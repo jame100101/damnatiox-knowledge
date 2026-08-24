@@ -52,7 +52,8 @@ const agentFixture: KnowledgeFixture = {
   searchQuery: 'SWE-bench',
   searchResult: 'SWE Agent 基础概念与 ACI',
   lightFolderPath: '/knowledge/agent-development',
-  mermaidPath: '/knowledge/agent-development/agent-1yc9ni5/agent-shipping-01oz6pm',
+  mermaidPath:
+    '/knowledge/agent-development/agent-basics/swe-agent-basics-aci-1bhr0z7',
   collapseFolder: 'Agent基础',
   treeFolders: ['Agent基础'],
   treeDocument: 'SWE Agent 基础概念与 ACI',

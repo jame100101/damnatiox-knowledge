@@ -1,64 +1,70 @@
-# Agent 开发学习路线总览
+# Agent 开发学习路线：从 Minimum Agent 到 Production Agent
 
-这套知识树以 Datawhale 的 **Agent Learning Hub** 为主线，并把每个 checklist 拆成可独立阅读的 Markdown 文档。学习顺序不是“先收集所有框架 API”，而是从可验证的最小闭环出发，逐步增加 SWE Agent、任务拆分与调度、工具与文件/进程执行、检索、记忆、Harness、多 Agent、协议、浏览器操作、评测和交付能力。
+> **Freshness metadata**
+> - `last_verified`: `2026-08-24`
+> - `version_scope`: `2026 Agent Engineering`
+> - `source_type`: `official-spec + primary-paper + official-repository`
+> - `stability`: `version-sensitive`
 
-## 一、主线结构
+这条路线把 **模型能力**、**Agent 控制循环**、**Context Engineering**、**Tool Runtime** 与 **Harness 工程**分层学习。它不把“调用一次大模型”当成 Agent，也不把 RAG、长期记忆、计划器或 Multi-Agent 当作所有系统的默认组件。
 
-1. **Agent 基础**：先区分 chatbot、workflow、agent、multi-agent，理解 ReAct 式 `observe → decide → act → observe`，再以 SWE Agent、SWE-agent 和 ACI 建立代码环境交互的基本概念。
-2. **Agent Loop**：实现模型调用、任务拆分、Plan 表示、DAG 调度、流程控制、Output Parser、结果回填、终止条件和失败处理。
-3. **Tools call**：把搜索、文件、数据库、浏览器、Terminal 和代码执行包装成严格接口；掌握进程生命周期、stdout/stderr、原子文件更新与证据。
-4. **RAG**：掌握 ingestion、chunk、embed、retrieve、rerank、grounded answer 和 citation。
-5. **Memory**：区分 context、短期状态、会话记忆和长期记忆，设计写入、召回、更新与遗忘。
-6. **Agent Harness**：研究运行时如何组织 Context Assembly、loop、registry、permission、Executor、middleware、session、compaction、trace 与恢复。
-7. **多 Agent 协调**：把多 Agent 当作职责、协议、调度和停止条件问题，而不是角色聊天。
-8. **Skills、协议与能力打包**：理解 Skill、Tool、Prompt、MCP、A2A、ACP 的边界。
-9. **浏览器与 Computer Use**：处理动态页面、视觉/DOM 观察、动作执行、失败恢复和证据留存。
-10. **评测、可观测性与安全**：用固定任务集、trace、指标、权限门和回归测试衡量系统。
-11. **生产交付**：明确用户和成功标准，补齐预算、重试、部署、配置、文档和运维闭环。
-12. **项目阶梯**：从 Calculator Agent 逐级走到 Production Harness。
-13. **完整 Agent 链路与框架对照**：把输入、成功契约、Context Builder、Plan、Scheduler、Parser、Executor、Evidence、Finalizer 和持久化连成一条可验证链路，并对照六套权威路线。
-14. **现代主流 Coding Agent 详细研究**：收录当前工作区已有的 Codex、Claude Code、Grok-1、Hermes Agent、OpenClaw 及横向对比研究。
+## 1. 两个工程心智模型
 
-## 二、贯穿全程的统一数据契约
+- 实现视角：`Agent = Model + Context + Tools`。模型基于本轮上下文产生决定，工具把决定连接到外部世界。
+- 系统视角：`Agent = Model + Harness`。Harness 组织 context、tool/runtime、permission/policy、execution control、validation、recovery、trace/session。
 
-建议把一次可审计执行抽象为：
+这两个公式用于划分工程责任，不是唯一的学术定义。一个固定 DAG 也许包含模型节点，但若控制权始终由预定义图掌握，它更接近 workflow。
 
-```text
-RunInput
-  -> SuccessContract
-  -> ContextManifest
-  -> PlanGraph / ScheduledTask
-  -> ModelResponse / ParsedDecision
-  -> ToolCall / ToolResult
-  -> EvidenceItem / ValidationResult
-  -> SessionState / RunResult
+```mermaid
+flowchart LR
+  U[Goal] --> C[Context Assembly]
+  C --> M[Model]
+  M --> D{Decision}
+  D -->|tool| R[Tool Runtime]
+  R --> O[Observation]
+  O --> C
+  D -->|final| V[Validation]
+  V --> E[Evidence-backed Result]
 ```
 
-- `RunInput`：身份、workspace、用户输入、附件、deadline 和初始预算。
-- `SuccessContract`：目标、交付物、验收条件、证据要求和非目标。
-- `ContextManifest`：本轮每个输入片段的来源、信任层、token、选择原因和截断状态。
-- `PlanGraph / ScheduledTask`：可验收步骤、依赖、资源、状态、计划版本与 worker lease。
-- `ModelResponse / ParsedDecision`：provider 原始响应与解析后的工具/最终输出决策。
-- `ToolCall`：工具名、版本、结构化参数、调用 ID、幂等键。
-- `ToolResult`：成功状态、结构化结果、错误类型、耗时和副作用摘要。
-- `EvidenceItem`：可回溯的来源、文件位置、查询、截图或日志片段。
-- `ValidationResult`：格式、协议、语义、权限和任务完成度检查。
-- `SessionState / RunResult`：跨轮状态、摘要、检查点、恢复信息以及最终交付。
+## 2. 主线顺序
 
-这个契约把“模型说它完成了”与“系统有证据证明完成了”分开，也为 trace、重放、评测和故障恢复提供共同语言。
+1. **01 Agent 基础**：Model、Agent、Workflow、Loop、Tool、Skill、Memory、Context、Harness、Runtime、Multi-Agent 的边界。
+2. **02 Agent Loop**：Minimal → Reliable → Planned → Workflow → Durable；先获得可停止、可验证的单 Agent。
+3. **03 Context Engineering**：Manifest、Assembly、Token Budget、Compaction、Prompt Cache、JIT Retrieval、Progressive Disclosure 与信任边界。
+4. **04 Tools 与 Runtime**：Schema、Registry、Invocation、Execution、OS Process、File/Shell/Browser、权限、幂等与证据。
+5. **05 Knowledge 与 Memory**：RAG/Knowledge 与 Memory 是两个子系统；均可向 context 提供材料，但不等同于 context。
+6. **06 Agent Harness**：执行控制、session、trace、恢复、验证与扩展点。
+7. **07 Skills 与 Protocols**：Skill/Tool/Prompt 及 MCP、A2A、ACP 的层级与版本边界。
+8. **08 Evaluation / Observability / Safety**：先建立任务、环境、validator、trace 与回归门，再讨论扩展能力。
+9. **09 Agent Evolution**：以评测、版本、sandbox 和 rollback 约束候选更新。
+10. **10 Multi-Agent**：只有角色隔离、并行吞吐或权限隔离收益高于协调成本时才使用。
+11. **11 Model Post-training**：可选高级轨道；区分 Harness Improvement 与 Model Improvement。
+12. **12 Production Agent**：可靠性、成本、SLO、发布、运维、审计。
+13. **13 Project Ladder**：P0–P7 的逐级可验收工程项目。
+14. **14 完整链路与架构对照**：把局部机制放回端到端系统。
+15. **99 源码研究**：固定 commit、证据等级和未知项，不把静态推断写成产品承诺。
 
-## 三、推荐学习方法
+## 3. 最小学习闭环
 
-- 每一阶段都做一个最小可运行产物；阅读只是输入，运行结果才是验证。
-- 先建立单 Agent 的可靠闭环，再加入 RAG、Memory 或多 Agent。
-- 把 Planner、Scheduler、Runner、Output Parser、Tool Executor 与 OS Process Executor 分开实现和测试。
-- 所有工具使用 JSON Schema 或等价的强类型定义；把参数错误作为可恢复观察返回模型。
-- Context 采用 typed fragment 与预算装配；结构化输出之后仍做 schema、业务和任务级验证。
-- 每次重要运行保留 trace：输入、模型响应、工具调用、工具结果、验证结果、终止原因。
-- 在增加能力前先准备回归任务，避免“功能更多、整体成功率反而下降”。
-- 把事实、静态推断和架构建议分开记录；研究开源项目时固定 commit。
+每阶段都执行：`Read → Implement → Trace → Evaluate → Explain failure → Fix → Regression`。只展示成功 Demo 不构成完成；至少保存输入、模型事件、工具调用、stdout/stderr 或 API 结果、停止原因和验收证据。
 
-## 四、路线来源
+## 4. 哪些能力不是默认项
 
-- [Datawhale Agent Learning Hub](https://datawhalechina.github.io/Agent-Learning-Hub/)
-- [Agent Learning Hub GitHub 仓库](https://github.com/datawhalechina/Agent-Learning-Hub)
+| 能力 | 何时引入 | 何时暂缓 |
+|---|---|---|
+| Plan / Scheduler | 任务可拆分、依赖可验证、重规划有收益 | 单步或短链任务 |
+| RAG | 答案依赖外部可引用知识 | 模型与确定性工具已经足够 |
+| Long-term Memory | 跨会话个性化或持续状态有明确收益 | 一次性任务或写入质量不可控 |
+| Reflection | 有独立 verifier 或可测反馈 | 只是让同一模型重复评价自己 |
+| Multi-Agent | 并行、隔离或异质能力收益可测 | 单 Agent + tools 已可可靠完成 |
+| Post-training | 有高质量轨迹、奖励和离线回归 | 仅靠 prompt/harness 就能修复 |
+
+## 5. 毕业判据
+
+- 能画出模型、context、tool/runtime、harness 与环境的责任边界；
+- 能解释一次失败发生在 selection、schema、permission、execution、observation、validation 还是 termination；
+- 能用 deterministic validator 优先验证可确定的结果；
+- 能在预算耗尽、取消、重启和部分失败后给出一致状态；
+- 能用固定数据集比较变更前后成功率、成本、延迟和安全指标；
+- 能将版本敏感结论追溯到官方规范、原始论文或固定源码 commit。
