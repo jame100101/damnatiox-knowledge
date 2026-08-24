@@ -7,8 +7,13 @@ const { t } = useLocale()
 const headings = computed(() => extractHeadings(props.source))
 const activeId = ref('')
 let observer: IntersectionObserver | undefined
+let mounted = false
 
-onMounted(() => {
+async function observeHeadings() {
+  observer?.disconnect()
+  activeId.value = ''
+  await nextTick()
+  if (!mounted) return
   observer = new IntersectionObserver(
     (entries) => {
       const visible = entries.find((entry) => entry.isIntersecting)
@@ -20,8 +25,22 @@ onMounted(() => {
     const el = document.getElementById(id)
     if (el) observer?.observe(el)
   })
+}
+
+onMounted(() => {
+  mounted = true
+  observeHeadings()
 })
-onUnmounted(() => observer?.disconnect())
+watch(
+  () => props.source,
+  () => {
+    if (mounted) observeHeadings()
+  },
+)
+onUnmounted(() => {
+  mounted = false
+  observer?.disconnect()
+})
 </script>
 
 <template>
@@ -32,7 +51,7 @@ onUnmounted(() => observer?.disconnect())
         v-for="heading in headings"
         :key="heading.id"
         :href="`#${heading.id}`"
-        :class="{ active: activeId === heading.id, nested: heading.level === 3 }"
+        :class="[`level-${heading.level}`, { active: activeId === heading.id }]"
       >
         {{ heading.title }}
       </a>
@@ -42,13 +61,58 @@ onUnmounted(() => observer?.disconnect())
 </template>
 
 <style scoped>
-.toc { min-width: 0; }
-.toc-title { display: flex; align-items: center; gap: 7px; margin-bottom: 13px; color: var(--kb-text-muted); font-size: 12px; font-weight: 700; }
-.toc-title svg { color: var(--kb-icon); }
-nav { display: grid; gap: 2px; border-left: 1px solid var(--kb-border); }
-nav a { padding: 5px 8px 5px 13px; color: var(--kb-text-subtle); font-size: 12px; line-height: 1.4; transition: color 140ms, border 140ms; border-left: 1px solid transparent; margin-left: -1px; }
-nav a:hover, nav a.active { color: var(--kb-text); }
-nav a.active { border-left-color: var(--kb-accent); }
-nav a.nested { padding-left: 22px; }
-p { font-size: 12px; line-height: 1.5; }
+.toc {
+  min-width: 0;
+}
+.toc-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 13px;
+  color: var(--kb-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+.toc-title svg {
+  color: var(--kb-icon);
+}
+nav {
+  display: grid;
+  gap: 2px;
+  border-left: 1px solid var(--kb-border);
+}
+nav a {
+  padding: 5px 8px 5px 13px;
+  color: var(--kb-text-subtle);
+  font-size: 12px;
+  line-height: 1.4;
+  transition:
+    color 140ms,
+    border 140ms;
+  border-left: 1px solid transparent;
+  margin-left: -1px;
+}
+nav a:hover,
+nav a.active {
+  color: var(--kb-text);
+}
+nav a.active {
+  border-left-color: var(--kb-accent);
+}
+nav a.level-3 {
+  padding-left: 22px;
+}
+nav a.level-4 {
+  padding-left: 30px;
+}
+nav a.level-5 {
+  padding-left: 38px;
+}
+nav a.level-6 {
+  padding-left: 46px;
+}
+p {
+  font-size: 12px;
+  line-height: 1.5;
+}
 </style>

@@ -467,7 +467,9 @@ watch([theme, locale], async () => {
 .markdown-body h1,
 .markdown-body h2,
 .markdown-body h3,
-.markdown-body h4 {
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
   color: var(--kb-text);
   line-height: 1.3;
   scroll-margin-top: 30px;
@@ -482,6 +484,19 @@ watch([theme, locale], async () => {
 .markdown-body h3 {
   margin: 2em 0 0.7em;
   font-size: 1.22em;
+}
+.markdown-body h4 {
+  margin: 1.7em 0 0.65em;
+  font-size: 1.08em;
+}
+.markdown-body h5 {
+  margin: 1.55em 0 0.6em;
+  font-size: 1em;
+}
+.markdown-body h6 {
+  margin: 1.45em 0 0.55em;
+  color: var(--kb-text-muted);
+  font-size: 0.94em;
 }
 .markdown-body a {
   color: var(--kb-accent);

@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import fs from 'node:fs'
+import path from 'node:path'
 import {
   excerpt,
   extractHeadings,
@@ -78,5 +80,63 @@ println!("observe");
     ])
     expect(readingTime('短文')).toBe(1)
     expect(excerpt('# Title\n\nHello **world**')).toContain('Title')
+  })
+
+  it('indexes deep headings with renderer-aligned ids and ignores fenced examples', () => {
+    const source = `# Page title
+## **Repeated** \`heading\`
+## Repeated heading
+#### Deep implementation detail
+###### Lowest supported detail
+
+\`\`\`markdown
+### Example heading only
+\`\`\``
+
+    expect(extractHeadings(source)).toEqual([
+      { level: 2, title: 'Repeated heading', id: 'repeated-heading' },
+      { level: 2, title: 'Repeated heading', id: 'repeated-heading-1' },
+      {
+        level: 4,
+        title: 'Deep implementation detail',
+        id: 'deep-implementation-detail',
+      },
+      {
+        level: 6,
+        title: 'Lowest supported detail',
+        id: 'lowest-supported-detail',
+      },
+    ])
+  })
+
+  it('keeps the TOC complete for every Markdown article in the knowledge base', () => {
+    const files: string[] = []
+    const visit = (directory: string) => {
+      for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+        const fullPath = path.join(directory, entry.name)
+        if (entry.isDirectory()) visit(fullPath)
+        else if (/\.md$/i.test(entry.name)) files.push(fullPath)
+      }
+    }
+    visit(path.resolve(process.cwd(), 'content'))
+
+    const failures: Array<{
+      file: string
+      rendered: Array<{ level: number; id: string }>
+      extracted: Array<{ level: number; id: string }>
+    }> = []
+    for (const file of files) {
+      const source = fs.readFileSync(file, 'utf8')
+      const rendered = [
+        ...renderMarkdown(source).matchAll(/<h([2-6])\b[^>]*\bid="([^"]+)"[^>]*>/g),
+      ].map((match) => ({ level: Number(match[1]), id: match[2]! }))
+      const extracted = extractHeadings(source).map(({ level, id }) => ({ level, id }))
+      if (JSON.stringify(rendered) !== JSON.stringify(extracted)) {
+        failures.push({ file: path.relative(process.cwd(), file), rendered, extracted })
+      }
+    }
+
+    expect(files.length).toBeGreaterThan(0)
+    expect(failures).toEqual([])
   })
 })

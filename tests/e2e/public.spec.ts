@@ -10,6 +10,7 @@ type KnowledgeFixture = {
   collapseFolder: string
   treeFolders: string[]
   treeDocument: string
+  deepTocPath?: string
 }
 
 const demoFixture: KnowledgeFixture = {
@@ -56,6 +57,8 @@ const agentFixture: KnowledgeFixture = {
   collapseFolder: 'Agent基础',
   treeFolders: ['Agent基础'],
   treeDocument: 'SWE Agent 基础概念与 ACI',
+  deepTocPath:
+    '/knowledge/agent-development/modern-agent-12eureu/openai-codex-agent-loop-skills-context-harness-1txmyyk',
 }
 
 async function detectFixture(page: Page): Promise<KnowledgeFixture> {
@@ -400,6 +403,35 @@ test('sidebar document icons stay uniform after long titles and reading lists ar
     expect(metric.flexShrink).toBe('0')
   }
   await expect(page.locator('.tree-label', { hasText: '推荐阅读' })).toHaveCount(0)
+})
+
+test('source-analysis TOC mirrors every rendered heading level', async ({ page }) => {
+  const fixture = await detectFixture(page)
+  if (!fixture.deepTocPath) {
+    test.skip()
+    return
+  }
+  await page.goto(fixture.deepTocPath)
+  await page.waitForLoadState('networkidle')
+
+  const renderedHeadings = await page
+    .locator(
+      '.markdown-body h2, .markdown-body h3, .markdown-body h4, .markdown-body h5, .markdown-body h6',
+    )
+    .evaluateAll((elements) => elements.map((element) => `#${element.id}`))
+  const tocLinks = await page
+    .locator('.toc nav a')
+    .evaluateAll((elements) => elements.map((element) => element.getAttribute('href')))
+
+  expect(renderedHeadings.length).toBeGreaterThan(60)
+  expect(tocLinks).toEqual(renderedHeadings)
+  await expect(page.locator('.toc nav a.level-4')).toHaveCount(2)
+  await expect(
+    page.locator('.toc nav a', { hasText: 'Phase 1：从 rollout 提取候选' }),
+  ).toBeVisible()
+  await expect(
+    page.locator('.toc nav a', { hasText: 'Phase 2：全局整合' }),
+  ).toBeVisible()
 })
 
 test('mobile layout has no horizontal overflow', async ({ page }) => {

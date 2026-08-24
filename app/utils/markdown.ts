@@ -262,16 +262,38 @@ export function renderMarkdown(source: string): string {
   })
 }
 
-export function extractHeadings(source: string) {
-  return source
-    .split('\n')
-    .map((line) => /^(#{2,3})\s+(.+)$/.exec(line))
-    .filter(Boolean)
-    .map((match) => ({
-      level: match![1]!.length,
-      title: match![2]!.replace(/[*_`]/g, '').trim(),
-      id: slugify(match![2]!.replace(/[*_`]/g, '').trim()),
-    }))
+export type MarkdownHeading = {
+  level: number
+  title: string
+  id: string
+}
+
+export function extractHeadings(source: string): MarkdownHeading[] {
+  const tokens = md.parse(source, {})
+  const headings: MarkdownHeading[] = []
+
+  tokens.forEach((token, index) => {
+    if (token.type !== 'heading_open') return
+    const level = Number(token.tag.slice(1))
+    // The document title is already rendered by the page header. Index every
+    // content heading below it so deeper source-analysis sections are not lost.
+    if (level < 2 || level > 6) return
+
+    const inline = tokens[index + 1]
+    const title = (inline?.children || [])
+      .filter((child) => child.type === 'text' || child.type === 'code_inline')
+      .map((child) => child.content)
+      .join('')
+      .trim()
+    if (!title) return
+
+    // markdown-it-anchor has already assigned the final, deduplicated id to
+    // the opening token. Reusing it keeps the TOC link exactly aligned with
+    // the rendered heading, including repeated titles.
+    headings.push({ level, title, id: token.attrGet('id') || slugify(title) })
+  })
+
+  return headings
 }
 
 export function readingTime(source: string): number {
