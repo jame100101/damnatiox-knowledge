@@ -276,6 +276,17 @@ test('Mermaid enlarge control stays compact without inheriting diagram SVG width
   expect(metrics.iconMinWidth).toBe('13px')
   expect(metrics.iconWidth).toBe('13px')
 
+  // Some production font/rendering combinations make the fixture diagram fit
+  // exactly inside the viewport. Force a deterministic overflow only for this
+  // scroll-position assertion; the control's real layout styles remain intact.
+  await scrollViewport.evaluate((element) => {
+    const svg = element.querySelector('svg')
+    if (svg && element.scrollWidth <= element.clientWidth) {
+      svg.style.minWidth = `${element.clientWidth + 480}px`
+      svg.style.maxWidth = 'none'
+    }
+  })
+
   await expect
     .poll(() =>
       scrollViewport.evaluate((element) => element.scrollWidth - element.clientWidth),
