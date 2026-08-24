@@ -2,7 +2,7 @@
 
 > **Freshness metadata**
 > - `last_verified`: `2026-08-24`
-> - `version_scope`: `analyzed snapshot 6e604438b6a2274145bae60aef053afa78d9170d; HEAD rechecked e834b355f2598f514ebf3b3f3dacb1c605a28dd7`
+> - `version_scope`: `analyzed snapshot 6e604438b6a2274145bae60aef053afa78d9170d; HEAD audit dea053e32f4cca1207f980d643f7c6ef795fd9f9`
 > - `source_type`: `official-repository`
 > - `stability`: `fast-moving`
 
@@ -12,9 +12,13 @@
 > 快照日期：2026-07-25
 > 定位：local-first、长运行、多 channel、多 agent runtime、可插拔 memory/context/tools 的个人 agent 平台。
 
+## 2026-08-24 HEAD 新鲜度审计
+
+远端 HEAD 复核到 [`dea053e`](https://github.com/openclaw/openclaw/tree/dea053e32f4cca1207f980d643f7c6ef795fd9f9)。本轮重新检查 `src/agents`、`gateway`、`memory`、`sessions`、`tools` 及 concepts/gateway/tools 文档：Gateway、session lane、runtime selection、context/memory/tool policy 与协议生成仍是主线；当前源码还强化了 ACP/session binding、execution lineage、approval audience 与 shutdown 时 session-end 配对。正文的代码证据继续固定在 `6e604438...`；对当前 HEAD 的快速审计不等同于已经确认所有新增 channel、provider 和默认配置。
+
 ## 0. 结论先行
 
-OpenClaw 是五个项目中平台边界最广的：
+OpenClaw 是当前对比样本中平台边界最广的：
 
 - Gateway 统一管理 channel、session、agent run 和事件；
 - Agent runtime 不只有一个：内置 OpenClaw loop，也可接 Codex 等外部 harness；

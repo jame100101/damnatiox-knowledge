@@ -12,6 +12,10 @@
 > 快照日期：2026-07-25
 > 主要补充证据：[Claude Code 官方文档](https://code.claude.com/docs/en/overview) 与 [Claude Agent SDK 文档](https://platform.claude.com/docs/en/agent-sdk/overview)
 
+## 2026-08-24 HEAD 新鲜度审计
+
+公开仓库 HEAD 复核到 [`45bdfa9`](https://github.com/anthropics/claude-code/tree/45bdfa96ca415da92e62b6ca85a1d6e29adf3c44)。README、CHANGELOG、plugins、skills、hooks、agents 与配置示例仍是公开证据主体；核心产品 runtime 仍不是一套可逐行审计的完整开源实现。本文保留 `7ef6eec9...` 作为可复现快照，并用当前官方文档校验产品契约。任何关于内部 loop class、调度算法或私有 executor 的描述，仍保持在“官方行为”或“推断”层，不升级成源码事实。
+
 ## 0. 一个必须先说明的源码边界
 
 `anthropics/claude-code` 的公开仓库在本快照中主要包含：

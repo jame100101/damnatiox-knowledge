@@ -65,7 +65,11 @@ watch(
       >
         <ChevronRight :size="13" :class="{ rotated: expanded }" />
       </button>
-      <component :is="expanded ? FolderOpen : FolderIcon" :size="15" class="tree-icon" />
+      <component
+        :is="expanded ? FolderOpen : FolderIcon"
+        :size="15"
+        class="tree-icon"
+      />
       <a
         :href="folderPublicPath(node.id, allFolders)"
         class="tree-label"
@@ -101,7 +105,12 @@ watch(
 </template>
 
 <style scoped>
-li, ul { list-style: none; margin: 0; padding: 0; }
+li,
+ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
 .tree-row {
   height: 34px;
   display: flex;
@@ -111,18 +120,57 @@ li, ul { list-style: none; margin: 0; padding: 0; }
   border-radius: var(--kb-radius-sm);
   color: var(--kb-text-muted);
   font-size: 13px;
-  transition: background 140ms, color 140ms;
+  transition:
+    background 140ms,
+    color 140ms;
 }
-.tree-row:hover, .tree-row.active { background: var(--kb-surface-hover); color: var(--kb-text); }
-.tree-row.expandable { cursor: pointer; }
-.tree-row.active { box-shadow: inset 2px 0 var(--kb-accent); }
-.tree-toggle { width: 18px; height: 24px; display: grid; place-items: center; border: 0; padding: 0; background: none; color: var(--kb-icon); cursor: pointer; }
-.tree-toggle:disabled { opacity: 0; }
-.tree-toggle svg { transition: transform 140ms; }
-.tree-toggle .rotated { transform: rotate(90deg); }
-.tree-icon { color: var(--kb-icon); flex: none; }
-.tree-label { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
-.tree-count { font: 10px/1.4 monospace; color: var(--kb-text-subtle); }
+.tree-row:hover,
+.tree-row.active {
+  background: var(--kb-surface-hover);
+  color: var(--kb-text);
+}
+.tree-row.expandable {
+  cursor: pointer;
+}
+.tree-row.active {
+  box-shadow: inset 2px 0 var(--kb-accent);
+}
+.tree-toggle {
+  width: 18px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--kb-icon);
+  cursor: pointer;
+}
+.tree-toggle:disabled {
+  opacity: 0;
+}
+.tree-toggle svg {
+  transition: transform 140ms;
+}
+.tree-toggle .rotated {
+  transform: rotate(90deg);
+}
+.tree-icon {
+  color: var(--kb-icon);
+  flex: none;
+}
+.tree-label {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.tree-count {
+  font: 10px/1.4 monospace;
+  color: var(--kb-text-subtle);
+}
 .tree-document {
   min-height: 30px;
   display: flex;
@@ -132,9 +180,28 @@ li, ul { list-style: none; margin: 0; padding: 0; }
   border-radius: var(--kb-radius-sm);
   color: var(--kb-text-muted);
   font-size: 12px;
-  transition: background 140ms, color 140ms;
+  transition:
+    background 140ms,
+    color 140ms;
 }
-.tree-document span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tree-document:hover, .tree-document.active { background: var(--kb-surface-hover); color: var(--kb-text); }
-.tree-document.active { color: var(--kb-accent); }
+.tree-document span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tree-document > svg {
+  width: 13px;
+  height: 13px;
+  min-width: 13px;
+  flex: 0 0 13px;
+  stroke-width: 1.75;
+}
+.tree-document:hover,
+.tree-document.active {
+  background: var(--kb-surface-hover);
+  color: var(--kb-text);
+}
+.tree-document.active {
+  color: var(--kb-accent);
+}
 </style>

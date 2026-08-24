@@ -2,7 +2,7 @@
 
 > **Freshness metadata**
 > - `last_verified`: `2026-08-24`
-> - `version_scope`: `analyzed snapshot inside document; HEAD rechecked a0ca7c19204e514f9590ce3b812e029b315ab9e9`
+> - `version_scope`: `analyzed snapshot 760112adb6458417da8614d2269e5325f0739ed5; HEAD audit 057dcdf236f8a6a26721c10fcc6ccb72726e272a`
 > - `source_type`: `official-repository`
 > - `stability`: `fast-moving`
 
@@ -11,6 +11,10 @@
 > 固定源码快照：[`760112adb6458417da8614d2269e5325f0739ed5`](https://github.com/NousResearch/hermes-agent/tree/760112adb6458417da8614d2269e5325f0739ed5)
 > 快照日期：2026-07-25
 > 定位：Python 为主、支持多 provider、多工具、skills、持久 session、压缩和自改进的个人 agent harness。
+
+## 2026-08-24 HEAD 新鲜度审计
+
+远端 HEAD 复核到 [`057dcdf`](https://github.com/NousResearch/hermes-agent/tree/057dcdf236f8a6a26721c10fcc6ccb72726e272a)。本轮再次检查 `agent`、`providers`、`tools`、`skills`、`gateway`、`web` 与 tests：多 provider normalization、conversation loop、tool registry/executor、skills、session/context 与 Gateway/Web 产品面仍在。正文的固定链接保留在 `760112a...`；HEAD 审计用于确认架构主线，没有把当前默认模型、阈值或配置倒填进旧快照。
 
 ## 0. 总体结论
 

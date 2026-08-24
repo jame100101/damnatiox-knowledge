@@ -52,8 +52,7 @@ const agentFixture: KnowledgeFixture = {
   searchQuery: 'SWE-bench',
   searchResult: 'SWE Agent 基础概念与 ACI',
   lightFolderPath: '/knowledge/agent-development',
-  mermaidPath:
-    '/knowledge/agent-development/agent-basics/swe-agent-basics-aci-1bhr0z7',
+  mermaidPath: '/knowledge/agent-development/agent-basics/swe-agent-basics-aci-1bhr0z7',
   collapseFolder: 'Agent基础',
   treeFolders: ['Agent基础'],
   treeDocument: 'SWE Agent 基础概念与 ACI',
@@ -224,9 +223,10 @@ test('branding and light theme controls keep their intended visual tokens', asyn
   expect(miniFolderStyle.background).not.toBe(lightTokens.codeBackground)
   expect(miniFolderStyle.border).toBe(lightTokens.iconBorder)
 
-  await page.keyboard.press('Control+K')
-  const shortcutStyle = await page
-    .getByRole('dialog', { name: '搜索知识库' })
+  await page.locator('.search-trigger').click()
+  const searchDialog = page.getByRole('dialog', { name: '搜索知识库' })
+  await expect(searchDialog).toBeVisible()
+  const shortcutStyle = await searchDialog
     .locator('footer kbd')
     .first()
     .evaluate((element) => {
@@ -364,6 +364,42 @@ test('folder labels collapse the current folder and the TOC remains sticky', asy
   await page.evaluate(() => window.scrollTo(0, 900))
   const toc = await page.locator('.reader-grid > aside').boundingBox()
   expect(toc?.y).toBeCloseTo(24, 0)
+})
+
+test('sidebar document icons stay uniform after long titles and reading lists are flat', async ({
+  page,
+}) => {
+  const fixture = await detectFixture(page)
+  await page.goto(fixture.navigation[0]!.path)
+  await page.waitForLoadState('networkidle')
+  for (const folder of fixture.treeFolders) {
+    await page.locator('.tree-label').filter({ hasText: folder }).first().click()
+  }
+
+  const icons = page.locator('.tree-document > svg:visible')
+  await expect(icons.first()).toBeVisible()
+  const metrics = await icons.evaluateAll((elements) =>
+    elements.map((element) => {
+      const style = getComputedStyle(element)
+      const bounds = element.getBoundingClientRect()
+      return {
+        width: bounds.width,
+        height: bounds.height,
+        minWidth: style.minWidth,
+        flexBasis: style.flexBasis,
+        flexShrink: style.flexShrink,
+      }
+    }),
+  )
+
+  for (const metric of metrics) {
+    expect(metric.width).toBeCloseTo(13, 1)
+    expect(metric.height).toBeCloseTo(13, 1)
+    expect(metric.minWidth).toBe('13px')
+    expect(metric.flexBasis).toBe('13px')
+    expect(metric.flexShrink).toBe('0')
+  }
+  await expect(page.locator('.tree-label', { hasText: '推荐阅读' })).toHaveCount(0)
 })
 
 test('mobile layout has no horizontal overflow', async ({ page }) => {

@@ -2,7 +2,7 @@
 
 > **Freshness metadata**
 > - `last_verified`: `2026-08-24`
-> - `version_scope`: `analyzed snapshot inside document; HEAD rechecked 40b7560169c7274147a47f9b0c75db89fe016d34`
+> - `version_scope`: `analyzed snapshot 4c43465133428898aa84f0bfc02c306ed65fb66a; HEAD audit 77b30a21e17d6ec6317f712ab6d044cb1bd152e7`
 > - `source_type`: `official-repository`
 > - `stability`: `fast-moving`
 
@@ -11,6 +11,12 @@
 > 固定源码快照：[`4c43465133428898aa84f0bfc02c306ed65fb66a`](https://github.com/openai/codex/tree/4c43465133428898aa84f0bfc02c306ed65fb66a)
 > 快照日期：2026-07-25
 > 定位：面向真实代码库的交互式 coding-agent harness，而不是单一的模型 SDK。
+
+## 2026-08-24 HEAD 新鲜度审计
+
+远端 HEAD 已推进到 [`77b30a2`](https://github.com/openai/codex/tree/77b30a21e17d6ec6317f712ab6d044cb1bd152e7)。本轮重新检查了 `codex-rs/core`、`core-skills`、`ext/memories`、`app-server` 与 protocol 目录：本文的 session/turn、tool runtime、skills、memory、compaction、sandbox 与 app-server 分层仍有对应实现；当前 core 还可见独立 `guardian`、`context_manager`、`plugins` 与 `realtime_conversation` 模块。正文中的逐文件链接继续固定在 `4c434651...`，用于保证行级证据可复现；HEAD 只作为结构存续与变更提醒，不用它悄悄替换旧快照的具体默认值。
+
+当前阅读应额外注意：Codex 仍在高频推进协议、工具、memory 和 app-server 表面。若要实现兼容客户端，应从当前 protocol schema 生成类型并运行契约测试，而不是复制本文快照字段。
 
 ## 0. 阅读口径与结论先行
 

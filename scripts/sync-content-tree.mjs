@@ -26,13 +26,18 @@ function displayName(filename) {
 
 function orderOf(filename, fallback = 1000) {
   const numbered = filename.match(/^(\d{2,3})-/)
+  // `000-` is reserved for a flattened recommendation document. Keep it
+  // ahead of ordinary `00-`/`01-` material without a wrapper folder.
+  if (numbered?.[1] === '000') return -10
   if (numbered) return Number(numbered[1]) * 10
   const research = filename.match(/(?:AGENT_SOURCE_)?(\d{2})[_-]/)
   return research ? Number(research[1]) * 10 : fallback
 }
 
 function normalize(value) {
-  return String(value || '').replace(/\s+/g, '').toLocaleLowerCase('zh-CN')
+  return String(value || '')
+    .replace(/\s+/g, '')
+    .toLocaleLowerCase('zh-CN')
 }
 
 function excerpt(markdown) {
@@ -55,8 +60,8 @@ async function scanTree(contentRoot) {
   const documents = []
 
   async function visit(directory, parentKey) {
-    const entries = (await fs.readdir(directory, { withFileTypes: true })).sort((a, b) =>
-      a.name.localeCompare(b.name, 'zh-CN', { numeric: true }),
+    const entries = (await fs.readdir(directory, { withFileTypes: true })).sort(
+      (a, b) => a.name.localeCompare(b.name, 'zh-CN', { numeric: true }),
     )
     for (const entry of entries.filter((item) => item.isDirectory())) {
       const fullPath = path.join(directory, entry.name)
@@ -70,7 +75,9 @@ async function scanTree(contentRoot) {
       })
       await visit(fullPath, key)
     }
-    for (const entry of entries.filter((item) => item.isFile() && /\.md$/i.test(item.name))) {
+    for (const entry of entries.filter(
+      (item) => item.isFile() && /\.md$/i.test(item.name),
+    )) {
       const fullPath = path.join(directory, entry.name)
       const markdown = await fs.readFile(fullPath, 'utf8')
       documents.push({
@@ -131,18 +138,22 @@ export async function syncContentTree({
     if (error) throw error
   }
 
-  const [{ data: folderRows, error: folderError }, { data: documentRows, error: docError }] =
-    await Promise.all([
-      supabase.from('folders').select('*'),
-      supabase.from('documents').select('*'),
-    ])
+  const [
+    { data: folderRows, error: folderError },
+    { data: documentRows, error: docError },
+  ] = await Promise.all([
+    supabase.from('folders').select('*'),
+    supabase.from('documents').select('*'),
+  ])
   if (folderError) throw folderError
   if (docError) throw docError
 
   const folders = folderRows || []
   const documents = documentRows || []
   let root = folders.find(
-    (item) => item.parent_id === null && (item.slug === slugify(rootName) || normalize(item.name) === normalize(rootName)),
+    (item) =>
+      item.parent_id === null &&
+      (item.slug === slugify(rootName) || normalize(item.name) === normalize(rootName)),
   )
   const report = {
     foldersCreated: 0,
@@ -165,12 +176,21 @@ export async function syncContentTree({
     is_visible: true,
   }
   if (root) {
-    const { data, error } = await supabase.from('folders').update(rootPayload).eq('id', root.id).select().single()
+    const { data, error } = await supabase
+      .from('folders')
+      .update(rootPayload)
+      .eq('id', root.id)
+      .select()
+      .single()
     if (error) throw error
     root = data
     report.foldersUpdated += 1
   } else {
-    const { data, error } = await supabase.from('folders').insert(rootPayload).select().single()
+    const { data, error } = await supabase
+      .from('folders')
+      .insert(rootPayload)
+      .select()
+      .single()
     if (error) throw error
     root = data
     folders.push(data)
@@ -179,7 +199,9 @@ export async function syncContentTree({
 
   const originalTreeIds = descendantFolderIds(folders, root.id)
   const originalFolders = folders.filter((folder) => originalTreeIds.has(folder.id))
-  const originalDocuments = documents.filter((doc) => originalTreeIds.has(doc.folder_id))
+  const originalDocuments = documents.filter((doc) =>
+    originalTreeIds.has(doc.folder_id),
+  )
   const claimedFolderIds = new Set([root.id])
   const folderIdByKey = new Map([[null, root.id]])
 
@@ -195,7 +217,9 @@ export async function syncContentTree({
     )
     if (!folder) {
       const candidates = originalFolders.filter(
-        (row) => !claimedFolderIds.has(row.id) && (row.slug === item.slug || names.has(normalize(row.name))),
+        (row) =>
+          !claimedFolderIds.has(row.id) &&
+          (row.slug === item.slug || names.has(normalize(row.name))),
       )
       if (candidates.length === 1) folder = candidates[0]
     }
@@ -211,12 +235,21 @@ export async function syncContentTree({
     }
     if (folder) {
       if (folder.parent_id !== parentId) report.foldersMoved += 1
-      const { data, error } = await supabase.from('folders').update(payload).eq('id', folder.id).select().single()
+      const { data, error } = await supabase
+        .from('folders')
+        .update(payload)
+        .eq('id', folder.id)
+        .select()
+        .single()
       if (error) throw error
       folder = data
       report.foldersUpdated += 1
     } else {
-      const { data, error } = await supabase.from('folders').insert(payload).select().single()
+      const { data, error } = await supabase
+        .from('folders')
+        .insert(payload)
+        .select()
+        .single()
       if (error) throw error
       folder = data
       report.foldersCreated += 1
@@ -238,20 +271,23 @@ export async function syncContentTree({
     )
     if (!document) {
       const titleCandidates = originalDocuments.filter(
-        (row) =>
-          !claimedDocumentIds.has(row.id) &&
-          titles.has(normalize(row.title)),
+        (row) => !claimedDocumentIds.has(row.id) && titles.has(normalize(row.title)),
       )
       if (titleCandidates.length === 1) document = titleCandidates[0]
     }
     if (!document) {
       const filenameCandidates = originalDocuments.filter(
-        (row) => !claimedDocumentIds.has(row.id) && row.original_filename === item.filename,
+        (row) =>
+          !claimedDocumentIds.has(row.id) && row.original_filename === item.filename,
       )
       if (filenameCandidates.length === 1) document = filenameCandidates[0]
     }
 
-    const section = item.relative.split(path.sep).map(displayName).find((name) => name !== item.title) || rootName
+    const section =
+      item.relative
+        .split(path.sep)
+        .map(displayName)
+        .find((name) => name !== item.title) || rootName
     const payload = {
       folder_id: folderId,
       title: item.title,
@@ -261,7 +297,10 @@ export async function syncContentTree({
       content: item.markdown,
       status: 'published',
       sort_order: item.sortOrder,
-      reading_time: Math.max(1, Math.ceil(item.markdown.replace(/\s+/g, '').length / 500)),
+      reading_time: Math.max(
+        1,
+        Math.ceil(item.markdown.replace(/\s+/g, '').length / 500),
+      ),
       excerpt: excerpt(item.markdown),
       original_filename: item.filename,
       file_size_bytes: Buffer.byteLength(item.markdown, 'utf8'),
@@ -269,12 +308,21 @@ export async function syncContentTree({
     }
     if (document) {
       if (document.folder_id !== folderId) report.documentsMoved += 1
-      const { data, error } = await supabase.from('documents').update(payload).eq('id', document.id).select().single()
+      const { data, error } = await supabase
+        .from('documents')
+        .update(payload)
+        .eq('id', document.id)
+        .select()
+        .single()
       if (error) throw error
       claimedDocumentIds.add(data.id)
       report.documentsUpdated += 1
     } else {
-      const { data, error } = await supabase.from('documents').insert(payload).select().single()
+      const { data, error } = await supabase
+        .from('documents')
+        .insert(payload)
+        .select()
+        .single()
       if (error) throw error
       claimedDocumentIds.add(data.id)
       report.documentsCreated += 1
@@ -282,16 +330,25 @@ export async function syncContentTree({
   }
 
   if (process.env.CONTENT_SYNC_ARCHIVE === 'true') {
-    const staleDocuments = originalDocuments.filter((row) => !claimedDocumentIds.has(row.id))
+    const staleDocuments = originalDocuments.filter(
+      (row) => !claimedDocumentIds.has(row.id),
+    )
     for (const row of staleDocuments) {
-      const { error } = await supabase.from('documents').update({ status: 'draft' }).eq('id', row.id)
+      const { error } = await supabase
+        .from('documents')
+        .update({ status: 'draft' })
+        .eq('id', row.id)
       if (error) throw error
       report.documentsArchived += 1
     }
-    const staleFolders = originalFolders
-      .filter((row) => row.id !== root.id && !claimedFolderIds.has(row.id))
+    const staleFolders = originalFolders.filter(
+      (row) => row.id !== root.id && !claimedFolderIds.has(row.id),
+    )
     for (const row of staleFolders) {
-      const { error } = await supabase.from('folders').update({ is_visible: false }).eq('id', row.id)
+      const { error } = await supabase
+        .from('folders')
+        .update({ is_visible: false })
+        .eq('id', row.id)
       if (error) throw error
       report.foldersArchived += 1
     }
