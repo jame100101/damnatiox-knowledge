@@ -1,6 +1,6 @@
 # Damnatiox Knowledge
 
-基于 Nuxt 3、Vue 3、TypeScript 与 Supabase 的动态 Markdown 知识库。公开运行时从 Supabase 读取文件夹、文章正文与元数据；`content/Agent开发`、`content/Java开发` 是两条课程的 Git 审查与批量同步源。
+基于 Nuxt 3、Vue 3、TypeScript 与 Supabase 的动态 Markdown 知识库。公开运行时从 Supabase 读取文件夹、文章正文与元数据；`content/Agent开发`、`content/Java开发`、`content/语言基础` 是三条课程的 Git 审查与批量同步源。
 
 ## 功能
 
@@ -147,6 +147,7 @@ order: 10
 ```bash
 # 先做本地结构、标题、链接、fence 与 freshness 校验
 npm run content:validate-architecture
+npm run content:validate-language-foundations
 
 # 需要管理员密码或仅在当前进程注入 service-role key
 $env:AGENT_SEED_ADMIN_PASSWORD="ADMIN_PASSWORD"
@@ -154,7 +155,7 @@ $env:CONTENT_SYNC_ARCHIVE="true"
 npm run content:sync
 ```
 
-同步器先按标题、原文件名和显式迁移 alias 匹配记录，再移动 `folder_id`，因此已存在文档会尽量保留数据库 ID。`CONTENT_SYNC_ARCHIVE=true` 会把两棵树中未匹配的旧文档设为草稿、旧文件夹设为隐藏；不做物理删除，且可在后台恢复。迁移详情见 `docs/CONTENT_ARCHITECTURE_MIGRATION_2026-08-24.md`。
+同步器先按标题、原文件名和显式迁移 alias 匹配记录，再移动 `folder_id`，因此已存在文档会尽量保留数据库 ID。`CONTENT_SYNC_ARCHIVE=true` 会把三棵树中未匹配的旧文档设为草稿、旧文件夹设为隐藏；不做物理删除，且可在后台恢复。迁移详情见 `docs/CONTENT_ARCHITECTURE_MIGRATION_2026-08-24.md`。
 
 快速变化文章使用正文可见的 `Freshness metadata` block；当前本地 importer 不把任意 frontmatter 字段映射到数据库 schema，因此该格式可在本地、后台编辑器和 Supabase 页面一致渲染。
 

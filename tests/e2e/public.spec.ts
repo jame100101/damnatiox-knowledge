@@ -88,6 +88,54 @@ test('public knowledge flow renders dynamic folder and document routes', async (
   await expect(page.getByText('知识库').first()).toBeVisible()
 })
 
+test('TypeScript language foundations are published with detailed comparisons', async ({
+  page,
+}) => {
+  const fixture = await detectFixture(page)
+  if (fixture === demoFixture) {
+    test.skip()
+    return
+  }
+
+  const languageCard = page.locator('main .folder-card').filter({ hasText: '语言基础' })
+  await expect(languageCard).toBeVisible()
+  await languageCard.click()
+  await expect(
+    page.getByRole('heading', { name: '语言基础', exact: true }),
+  ).toBeVisible()
+
+  const basics = page.locator('.child-grid a').filter({ hasText: 'TypeScript语言基础' })
+  const comparison = page
+    .locator('.child-grid a')
+    .filter({ hasText: 'TypeScript跨语言对照' })
+  await expect(basics).toBeVisible()
+  await expect(comparison).toBeVisible()
+
+  await basics.click()
+  await expect(
+    page
+      .locator('.document-list a')
+      .filter({ hasText: '环境配置与第一个 TypeScript 项目' }),
+  ).toBeVisible()
+  await expect(
+    page
+      .locator('.document-list a')
+      .filter({ hasText: '映射类型、条件类型、模板字面量类型与 infer' }),
+  ).toBeVisible()
+
+  await page
+    .getByLabel('面包屑')
+    .getByRole('link', { name: '语言基础', exact: true })
+    .click()
+  await comparison.click()
+  await expect(
+    page.locator('.document-list a').filter({ hasText: 'TypeScript 与 JavaScript' }),
+  ).toBeVisible()
+  await expect(
+    page.locator('.document-list a').filter({ hasText: 'TypeScript 与 C++' }),
+  ).toBeVisible()
+})
+
 test('global search opens with keyboard shortcut and finds a document', async ({
   page,
 }) => {

@@ -107,6 +107,7 @@ const expectedTop = {
     '项目阶梯',
     '开源项目架构研究',
   ],
+  语言基础: ['TypeScript语言基础', 'TypeScript跨语言对照'],
 }
 
 const reports = []

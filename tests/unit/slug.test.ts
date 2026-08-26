@@ -5,6 +5,8 @@ describe('slug and filename utilities', () => {
   it('generates stable slugs for mixed Chinese and English titles', () => {
     expect(slugify('Java 后端 / Spring Boot')).toBe('java-backend-spring-boot')
     expect(slugify('  Tool Calling: Basics  ')).toBe('tool-calling-basics')
+    expect(slugify('语言基础')).toBe('language-foundations')
+    expect(slugify('TypeScript语言基础')).toBe('typescript-language-foundations')
   })
 
   it('keeps arbitrary Chinese folder names compatible with database checks', () => {

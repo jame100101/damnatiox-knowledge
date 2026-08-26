@@ -26,7 +26,9 @@
     "content:verify-java-learning": "node scripts/verify-java-import.mjs",
     "content:verify": "node scripts/verify-content-import.mjs",
     "content:validate-architecture": "node scripts/validate-content-architecture.mjs",
-    "content:sync": "node scripts/import-agent-learning.mjs && node scripts/import-java-learning.mjs",
+    "content:validate-language-foundations": "node scripts/validate-language-foundations.mjs",
+    "content:import-language-foundations": "node scripts/import-language-foundations.mjs",
+    "content:sync": "node scripts/import-agent-learning.mjs && node scripts/import-java-learning.mjs && node scripts/import-language-foundations.mjs",
     "content:validate-code-groups": "node scripts/validate-code-language-groups.mjs"
   },
   "overrides": {

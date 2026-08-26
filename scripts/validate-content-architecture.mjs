@@ -22,6 +22,7 @@ const targets = {
     '13-分布式与微服务', '14-性能工程', '15-云原生DevOps与可观测性',
     '16-可选专项', '17-项目阶梯', '99-开源项目架构研究',
   ],
+  语言基础: ['01-TypeScript语言基础', '02-TypeScript跨语言对照'],
 }
 
 const retiredByArea = {
@@ -37,6 +38,7 @@ const retiredByArea = {
     '07-分布式与微服务', '08-高性能与消息队列', '10-测试与质量工程',
     '11-云原生DevOps与可观测性', '12-前端与全栈交付', '13-项目阶梯',
   ],
+  语言基础: [],
 }
 
 async function walk(directory) {
@@ -57,7 +59,9 @@ for (const [area, required] of Object.entries(targets)) {
   for (const folder of retiredByArea[area]) if (names.has(folder)) errors.push(`${area} 保留了旧一级目录：${folder}`)
 }
 
-const files = [...(await walk(path.join(contentRoot, 'Agent开发'))), ...(await walk(path.join(contentRoot, 'Java开发')))]
+const files = (await Promise.all(
+  Object.keys(targets).map((area) => walk(path.join(contentRoot, area))),
+)).flat()
 const knownFiles = new Set(files.map((filename) => path.normalize(filename)))
 const titles = new Map()
 const hashes = new Map()
@@ -124,10 +128,29 @@ for (const concept of [
 if (/Structured Concurrency.{0,30}(?:stable|稳定 API)/iu.test(javaText)) errors.push('Structured Concurrency 被表述为稳定 API')
 if (/Virtual Threads?.{0,20}(?:一定|总是|天然).{0,10}(?:更快|提升性能)/iu.test(javaText)) errors.push('Virtual Threads 存在泛化性能承诺')
 
+const languageFiles = await walk(path.join(contentRoot, '语言基础'))
+const languageAll = await Promise.all(languageFiles.map((file) => fs.readFile(file, 'utf8')))
+const languageText = languageAll.join('\n')
+for (const concept of [
+  'TypeScript 7.0', '类型擦除', 'unknown', 'never', '结构化', '可辨识联合',
+  'strictNullChecks', 'noUncheckedIndexedAccess', 'exactOptionalPropertyTypes',
+  'keyof', '映射类型', '条件类型', '模板字面量类型', 'infer', 'NodeNext',
+  '声明文件', '运行时验证', 'JavaScript', 'Java', 'Python', 'C++', 'RAII',
+]) if (!languageText.includes(concept)) errors.push(`语言基础缺少概念：${concept}`)
+
+const typeScriptExamples = (languageText.match(/^```typescript(?:\s|$)/gm) || []).length
+const officialTypeScriptLinks = (languageText.match(/https:\/\/www\.typescriptlang\.org\//g) || []).length
+if (languageFiles.length < 25) errors.push(`语言基础文档不足：${languageFiles.length} < 25`)
+if (typeScriptExamples < 45) errors.push(`TypeScript 代码示例不足：${typeScriptExamples} < 45`)
+if (officialTypeScriptLinks < 30) errors.push(`TypeScript 官方资料引用不足：${officialTypeScriptLinks} < 30`)
+
 const report = {
   documents: files.length,
   agentDocuments: agentAll.length,
   javaDocuments: javaAll.length,
+  languageDocuments: languageAll.length,
+  typeScriptExamples,
+  officialTypeScriptLinks,
   uniqueTitles: titles.size,
   fastMovingDocuments: fastMoving,
   relativeLinks,

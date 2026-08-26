@@ -1,4 +1,11 @@
 const transliteration: Record<string, string> = {
+  语言基础: 'language-foundations',
+  跨语言对照: 'cross-language-comparison',
+  语言: 'language',
+  对照: 'comparison',
+  环境配置: 'environment-setup',
+  运行模型: 'runtime-model',
+  类型推断: 'type-inference',
   Java: 'java',
   后端: 'backend',
   基础: 'basics',
